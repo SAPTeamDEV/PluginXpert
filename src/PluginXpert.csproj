@@ -14,7 +14,7 @@
     <Company>SAP Team</Company>
     <Description>An advanced plugin manager with generic api, permission manager and etc</Description>
     <PackageTags>plugin; plugin-manager; permission</PackageTags>
-    <RepositoryUrl></RepositoryUrl>
+    <RepositoryUrl>https://github.com/SAPTeamDEV/PluginXpert</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     
     <PackageReadmeFile>README.md</PackageReadmeFile>
