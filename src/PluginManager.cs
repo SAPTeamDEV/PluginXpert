@@ -4,10 +4,10 @@ namespace SAPTeam.PluginXpert;
 
 public class PluginManager
 {
-    public static List<T> GetPlugins<T>(string directory)
+    public static List<T> GetPlugins<T>(string directory, string namePattern = "*.dll")
         where T : new()
     {
-        IEnumerable<T> commands = Directory.EnumerateFiles(Path.Join(AppContext.BaseDirectory, "Plugins"), "*.dll").SelectMany(pluginPath =>
+        IEnumerable<T> commands = Directory.EnumerateFiles(directory, namePattern).SelectMany(pluginPath =>
         {
             Assembly pluginAssembly = LoadPlugin(pluginPath);
             return CreateCommands<T>(pluginAssembly);
