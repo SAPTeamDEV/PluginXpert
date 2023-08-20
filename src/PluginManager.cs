@@ -42,7 +42,7 @@ public static class PluginManager
         {
             string availableTypes = string.Join(",", assembly.GetTypes().Select(t => t.FullName));
             throw new ApplicationException(
-                $"Can't find any type which implements ICommand in {assembly} from {assembly.Location}.\n" +
+                $"Can't find any type which implements {typeof(T).Name} in {assembly} from {assembly.Location}.\n" +
                 $"Available types: {availableTypes}");
         }
     }
