@@ -25,6 +25,18 @@ public class PluginManager<T>
     }
 
     /// <summary>
+    /// Loads plugins and adds them to the <see cref="Plugins"/>. property.
+    /// </summary>
+    /// <param name="directory">Directory of plugin assemblies.</param>
+    /// <param name="namePattern">A regex pattern for selecting plugin assemblies.</param>
+    public List<T> AddPlugin(string directory, string namePattern = "*.dll")
+    {
+        var plugins = GetPlugins<T>(directory, namePattern);
+        Plugins.AddRange(plugins);
+        return plugins;
+    }
+
+    /// <summary>
     /// Loads all plugins with the given <typeparamref name="T"/> type.
     /// </summary>
     /// <typeparam name="TPlugin">Type of objects that would be loaded.</typeparam>
