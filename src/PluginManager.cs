@@ -52,6 +52,20 @@ public class PluginManager<T>
             return CreateCommands<T>(pluginAssembly);
         }).ToList();
 
+        foreach (var command in commands)
+        {
+            try
+            {
+                command.OnLoad();
+                command.IsLoaded = true;
+            }
+            catch (Exception e)
+            {
+                command.IsLoaded = false;
+                command.Exception = e;
+            }
+        }
+
         return (List<TPlugin>)commands;
     }
 
