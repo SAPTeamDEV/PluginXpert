@@ -1,0 +1,42 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net461</TargetFrameworks>
+    <AssemblyName>SAPTeam.PluginXpert</AssemblyName>
+    <RootNamespace>$(AssemblyName)</RootNamespace>
+    <PackageId>$(AssemblyName)</PackageId>
+    
+    <Title>PluginXpert</Title>
+    <AssemblyTitle>Expert Plugin Manager</AssemblyTitle>
+    <Version>1.0</Version>
+    <Product>Expert Plugin Manager for C#</Product>
+    <Authors>Alireza Poodineh</Authors>
+    <Company>SAP Team</Company>
+    <Description>An advanced plugin manager with generic api, permission manager and etc</Description>
+    <PackageTags>plugin; plugin-manager; permission</PackageTags>
+    <RepositoryUrl></RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+	  <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    
+    <GenerateAssemblyInfo>True</GenerateAssemblyInfo>
+    <Deterministic>True</Deterministic>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <SignAssembly>True</SignAssembly>
+    <AssemblyOriginatorKeyFile>PluginXpert.snk</AssemblyOriginatorKeyFile>
+   </PropertyGroup>
+    
+    <ItemGroup>
+    <PackageReference Include="Nerdbank.GitVersioning" Version="3.5.119" PrivateAssets="All" />
+    <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.1.1" PrivateAssets="All" />
+    </ItemGroup>
+    
+    <ItemGroup>
+    <None Include="README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+  
+</Project>

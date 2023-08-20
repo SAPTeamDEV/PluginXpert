@@ -1,0 +1,1 @@
+An advanced plugin manager with generic api,  permission manager and etc
