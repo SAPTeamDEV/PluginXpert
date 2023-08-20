@@ -2,8 +2,18 @@
 
 namespace SAPTeam.PluginXpert;
 
+/// <summary>
+/// Represents static methods for loading generic plugins.
+/// </summary>
 public static class PluginManager
 {
+    /// <summary>
+    /// Loads all plugins with the given <typeparamref name="T"/> type.
+    /// </summary>
+    /// <typeparam name="T">Type of objects that would be loaded.</typeparam>
+    /// <param name="directory">Directory of plugin assemblies.</param>
+    /// <param name="namePattern">A regex pattern for selecting plugin assemblies.</param>
+    /// <returns></returns>
     public static List<T> GetPlugins<T>(string directory, string namePattern = "*.dll")
         where T : new()
     {
