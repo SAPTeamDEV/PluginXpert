@@ -2,7 +2,7 @@
 
 namespace SAPTeam.PluginXpert;
 
-public class PluginManager
+public static class PluginManager
 {
     public static List<T> GetPlugins<T>(string directory, string namePattern = "*.dll")
         where T : new()
