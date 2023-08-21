@@ -2,7 +2,7 @@
 
 namespace TestPlugin
 {
-    public class Class1 : IPlugin
+    public class Class1 : Plugin
     {
         public string Name => "Test {;ugin";
         public string[] Permissions { get; } = new string[]

@@ -28,7 +28,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\src\PluginXpert.csproj" />
-    <ProjectReference Include="..\TestPlugin\TestPlugin.csproj" />
   </ItemGroup>
 
 </Project>

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace SAPTeam.PluginXpert
 {
     /// <summary>
-    /// Provides standard interface to implement managed plugin.
+    /// Provides standard interface to implement managed plugins.
     /// </summary>
     public interface IPlugin
     {
