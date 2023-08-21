@@ -5,6 +5,8 @@ VisualStudioVersion = 17.7.34009.444
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PluginXpert", "src\PluginXpert.csproj", "{0CC19344-D46B-415A-BC0E-67E8AC628960}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestPlugin", "TestPlugin\TestPlugin.csproj", "{E51FA30E-9EFD-416B-8F2F-32EA3EE696EA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{0CC19344-D46B-415A-BC0E-67E8AC628960}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0CC19344-D46B-415A-BC0E-67E8AC628960}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0CC19344-D46B-415A-BC0E-67E8AC628960}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E51FA30E-9EFD-416B-8F2F-32EA3EE696EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E51FA30E-9EFD-416B-8F2F-32EA3EE696EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E51FA30E-9EFD-416B-8F2F-32EA3EE696EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E51FA30E-9EFD-416B-8F2F-32EA3EE696EA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
