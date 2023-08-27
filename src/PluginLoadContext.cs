@@ -3,31 +3,34 @@ using System.Runtime.Loader;
 
 namespace SAPTeam.PluginXpert;
 
-internal class PluginLoadContext : AssemblyLoadContext
+public class PluginLoadContext : AssemblyLoadContext
 {
-    private readonly AssemblyDependencyResolver resolver;
+    private AssemblyDependencyResolver _resolver;
 
     public PluginLoadContext(string pluginPath)
     {
-        resolver = new AssemblyDependencyResolver(pluginPath);
+        _resolver = new AssemblyDependencyResolver(pluginPath);
     }
 
     protected override Assembly Load(AssemblyName assemblyName)
     {
-        string assemblyPath = resolver.ResolveAssemblyToPath(assemblyName);
+        string assemblyPath = _resolver.ResolveAssemblyToPath(assemblyName);
         if (assemblyPath != null)
         {
             return LoadFromAssemblyPath(assemblyPath);
         }
 
-#pragma warning disable CS8603 // Possible null reference return.
         return null;
-#pragma warning restore CS8603 // Possible null reference return.
     }
 
     protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)
     {
-        string libraryPath = resolver.ResolveUnmanagedDllToPath(unmanagedDllName);
-        return libraryPath != null ? LoadUnmanagedDllFromPath(libraryPath) : IntPtr.Zero;
+        string libraryPath = _resolver.ResolveUnmanagedDllToPath(unmanagedDllName);
+        if (libraryPath != null)
+        {
+            return LoadUnmanagedDllFromPath(libraryPath);
+        }
+
+        return IntPtr.Zero;
     }
 }
