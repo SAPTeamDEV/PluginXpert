@@ -30,6 +30,7 @@ jobs:
   build:
     uses: SAPTeamDEV/Gawe/.github/workflows/dotnet.yml@master
     with:
+      deploy-path: 'src/*/*.csproj'
       deploy: ${{ !contains(inputs.deploy, 'false') }}
       nuget-deploy: ${{ !contains(inputs.nuget-deploy, 'false') }}
     secrets: inherit
