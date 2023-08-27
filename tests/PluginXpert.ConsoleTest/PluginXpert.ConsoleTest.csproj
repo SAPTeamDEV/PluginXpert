@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\PluginXpert.csproj" />
-    <ProjectReference Include="..\TestPlugin\TestPlugin.csproj" />
+    <ProjectReference Include="..\..\src\PluginXpert\PluginXpert.csproj" />
+    <ProjectReference Include="..\..\samples\TestPlugin\TestPlugin.csproj" />
   </ItemGroup>
 
 </Project>

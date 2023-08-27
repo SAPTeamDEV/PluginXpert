@@ -22,7 +22,7 @@ namespace AppWithPlugin
                     Console.ReadLine();
                 }
 
-                var pm = new PluginManager("..\\..\\..\\..\\TestPlugin\\bin\\Debug\\net6.0".Replace('\\', Path.DirectorySeparatorChar), "TestPlugin.dll");
+                var pm = new PluginManager("..\\..\\..\\..\\..\\samples\\TestPlugin\\bin\\Debug\\net6.0".Replace('\\', Path.DirectorySeparatorChar), "TestPlugin.dll");
 
                 var commands = pm.Plugins;
 
