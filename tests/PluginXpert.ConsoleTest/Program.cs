@@ -12,6 +12,12 @@ namespace AppWithPlugin
 {
     class Program
     {
+#if DEBUG
+        static string pluginPath = "..\\..\\..\\..\\..\\samples\\TestPlugin\\bin\\Debug\\net6.0";
+#else
+        static string pluginPath = "..\\..\\..\\..\\..\\samples\\TestPlugin\\bin\\Release\\net6.0";
+#endif
+
         static void Main(string[] args)
         {
             try
@@ -22,7 +28,7 @@ namespace AppWithPlugin
                     Console.ReadLine();
                 }
 
-                var pm = new PluginManager("..\\..\\..\\..\\..\\samples\\TestPlugin\\bin\\Debug\\net6.0".Replace('\\', Path.DirectorySeparatorChar), "TestPlugin.dll");
+                var pm = new PluginManager(pluginPath.Replace('\\', Path.DirectorySeparatorChar), "TestPlugin.dll");
 
                 var commands = pm.Plugins;
 
