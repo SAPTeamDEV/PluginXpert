@@ -24,7 +24,7 @@
     <GenerateAssemblyInfo>True</GenerateAssemblyInfo>
     <Deterministic>True</Deterministic>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
-    <SignAssembly>True</SignAssembly>
+    <SignAssembly>False</SignAssembly>
     <AssemblyOriginatorKeyFile>PluginXpert.Types.snk</AssemblyOriginatorKeyFile>
    </PropertyGroup>
     

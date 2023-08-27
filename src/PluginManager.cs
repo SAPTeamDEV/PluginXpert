@@ -11,6 +11,8 @@ namespace SAPTeam.PluginXpert;
 public class PluginManager<T>
     where T : IPlugin, new()
 {
+    static readonly object lockObj = new();
+
     public static PluginManager<T> Global { get; set; }
 
     /// <summary>
@@ -76,41 +78,47 @@ public class PluginManager<T>
 
     private static IEnumerable<TPlugin> CreateCommands<TPlugin>(Assembly assembly, PermissionManager permissionManager = null)
     {
-        int count = 0;
-
-        foreach (Type type in assembly.GetTypes())
+        lock (lockObj)
         {
-            if (typeof(TPlugin).IsAssignableFrom(type))
-            {
-                if (Activator.CreateInstance(type) is TPlugin result)
-                {
-                    if (result is IPlugin plugin)
-                    {
-                        try
-                        {
-                            permissionManager.RegisterPlugin(plugin);
-                            plugin.OnLoad();
-                            plugin.IsLoaded = true;
-                        }
-                        catch (Exception e)
-                        {
-                            plugin.IsLoaded = false;
-                            plugin.Exception = e;
-                        }
-                    }
+            int count = 0;
+            var t = assembly.GetTypes();
 
-                    count++;
-                    yield return result;
+            foreach (Type type in assembly.GetTypes())
+            {
+                var n = type.FullName;
+                Console.WriteLine(n);
+                if (typeof(TPlugin).IsAssignableFrom(type))
+                {
+                    if (Activator.CreateInstance(type) is TPlugin result)
+                    {
+                        if (result is IPlugin plugin)
+                        {
+                            try
+                            {
+                                permissionManager.RegisterPlugin(plugin);
+                                plugin.OnLoad();
+                                plugin.IsLoaded = true;
+                            }
+                            catch (Exception e)
+                            {
+                                plugin.IsLoaded = false;
+                                plugin.Exception = e;
+                            }
+                        }
+
+                        count++;
+                        yield return result;
+                    }
                 }
             }
-        }
 
-        if (count == 0)
-        {
-            string availableTypes = string.Join(",", assembly.GetTypes().Select(t => t.FullName));
-            throw new ApplicationException(
-                $"Can't find any type which implements {typeof(T).Name} in {assembly} from {assembly.Location}.\n" +
-                $"Available types: {availableTypes}");
+            if (count == 0)
+            {
+                string availableTypes = string.Join(",", assembly.GetTypes().Select(t => t.FullName));
+                throw new ApplicationException(
+                    $"Can't find any type which implements {typeof(T).Name} in {assembly} from {assembly.Location}.\n" +
+                    $"Available types: {availableTypes}");
+            }
         }
     }
 }
