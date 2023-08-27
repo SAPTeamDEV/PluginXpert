@@ -1,4 +1,5 @@
-﻿using PluginBase;
+﻿
+using SAPTeam.PluginXpert.Types;
 
 using System;
 using System.Collections.Generic;
@@ -25,7 +26,7 @@ namespace AppWithPlugin
     "TestPlugin\\bin\\Debug\\net6.0\\TestPlugin.dll"
 };
 
-                IEnumerable<ICommand> commands = pluginPaths.SelectMany(pluginPath =>
+                IEnumerable<IPlugin> commands = pluginPaths.SelectMany(pluginPath =>
                 {
                     Assembly pluginAssembly = LoadPlugin(pluginPath);
                     return CreateCommands(pluginAssembly);
@@ -34,9 +35,9 @@ namespace AppWithPlugin
                 if (args.Length == 0)
                 {
                     Console.WriteLine("Commands: ");
-                    foreach (ICommand command in commands)
+                    foreach (IPlugin command in commands)
                     {
-                        Console.WriteLine($"{command.Name}\t - {command.Description}");
+                        Console.WriteLine($"{command.Name}");
                     }
                 }
                 else
@@ -45,14 +46,14 @@ namespace AppWithPlugin
                     {
                         Console.WriteLine($"-- {commandName} --");
 
-                        ICommand command = commands.FirstOrDefault(c => c.Name == commandName);
+                        IPlugin command = commands.FirstOrDefault(c => c.Name == commandName);
                         if (command == null)
                         {
                             Console.WriteLine("No such command is known.");
                             return;
                         }
 
-                        command.Execute();
+                        command.Run();
 
                         Console.WriteLine();
                     }
@@ -80,15 +81,15 @@ namespace AppWithPlugin
             return loadContext.LoadFromAssemblyName(new AssemblyName(Path.GetFileNameWithoutExtension(pluginLocation)));
         }
 
-        static IEnumerable<ICommand> CreateCommands(Assembly assembly)
+        static IEnumerable<IPlugin> CreateCommands(Assembly assembly)
         {
             int count = 0;
 
             foreach (Type type in assembly.GetTypes())
             {
-                if (typeof(ICommand).IsAssignableFrom(type))
+                if (typeof(IPlugin).IsAssignableFrom(type))
                 {
-                    ICommand result = Activator.CreateInstance(type) as ICommand;
+                    IPlugin result = Activator.CreateInstance(type) as IPlugin;
                     if (result != null)
                     {
                         count++;
@@ -101,7 +102,7 @@ namespace AppWithPlugin
             {
                 string availableTypes = string.Join(",", assembly.GetTypes().Select(t => t.FullName));
                 throw new ApplicationException(
-                    $"Can't find any type which implements ICommand in {assembly} from {assembly.Location}.\n" +
+                    $"Can't find any type which implements IPlugin in {assembly} from {assembly.Location}.\n" +
                     $"Available types: {availableTypes}");
             }
         }

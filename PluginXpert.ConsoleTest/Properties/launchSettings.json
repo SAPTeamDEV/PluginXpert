@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "PluginXpert.ConsoleTest": {
+      "commandName": "Project"
+    },
+    "Run TestPlugin": {
+      "commandName": "Project",
+      "commandLineArgs": "TestPlugin"
+    }
+  }
+}
