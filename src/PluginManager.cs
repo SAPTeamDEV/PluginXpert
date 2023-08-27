@@ -8,7 +8,8 @@ namespace SAPTeam.PluginXpert;
 /// Represents methods for loading managed plugins.
 /// </summary>
 public class PluginManager
-{   public static PluginManager Global { get; set; }
+{
+    public static PluginManager Global { get; set; }
 
     /// <summary>
     /// Gets the list of loaded plugins.
@@ -63,13 +64,13 @@ public class PluginManager
         return commands;
     }
 
-    static Assembly LoadPlugin(string pluginLocation)
+    Assembly LoadPlugin(string pluginLocation)
     {
         PluginLoadContext loadContext = new PluginLoadContext(pluginLocation);
         return loadContext.LoadFromAssemblyName(new AssemblyName(Path.GetFileNameWithoutExtension(pluginLocation)));
     }
 
-    static IEnumerable<IPlugin> CreateCommands(Assembly assembly)
+    IEnumerable<IPlugin> CreateCommands(Assembly assembly)
     {
         int count = 0;
 
@@ -80,6 +81,10 @@ public class PluginManager
                 IPlugin result = Activator.CreateInstance(type) as IPlugin;
                 if (result != null)
                 {
+                    PermissionManager.RegisterPlugin(result);
+                    result.OnLoad();
+                    result.IsLoaded = true;
+
                     count++;
                     yield return result;
                 }

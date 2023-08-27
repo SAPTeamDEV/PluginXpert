@@ -10,6 +10,6 @@
         /// </summary>
         /// <param name="permission">The name of requsted permission.</param>
         /// <returns></returns>
-        bool RequastPermission(string permission);
+        bool RequestPermission(string permission);
     }
 }

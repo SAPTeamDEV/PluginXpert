@@ -13,7 +13,7 @@ namespace TestPlugin
 
         public override void OnLoad()
         {
-            PermissionManager.RequastPermission("test");
+            PermissionManager.RequestPermission("test");
         }
 
         public override void Run()
