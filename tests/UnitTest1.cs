@@ -8,8 +8,7 @@ namespace PluginXpert.Tests
         [Fact]
         public void Test1()
         {
-            var perm = new PermissionManager();
-            var p = new PluginManager<Plugin>(".", "TestPlugin.dll", perm);
+            var pm = new PluginManager("..\\..\\..\\..\\TestPlugin\\bin\\Debug\\net6.0", "TestPlugin.dll");
         }
     }
 }

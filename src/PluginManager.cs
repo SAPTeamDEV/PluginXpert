@@ -5,20 +5,15 @@ using SAPTeam.PluginXpert.Types;
 namespace SAPTeam.PluginXpert;
 
 /// <summary>
-/// Represents methods for loading generic or managed plugins.
+/// Represents methods for loading managed plugins.
 /// </summary>
-/// <typeparam name="T">A class that implements <see cref="IPlugin"/> and has a parameterless constructor.</typeparam>
-public class PluginManager<T>
-    where T : IPlugin, new()
-{
-    static readonly object lockObj = new();
-
-    public static PluginManager<T> Global { get; set; }
+public class PluginManager
+{   public static PluginManager Global { get; set; }
 
     /// <summary>
     /// Gets the list of loaded plugins.
     /// </summary>
-    public List<T> Plugins { get; }
+    public List<IPlugin> Plugins { get; }
 
     /// <summary>
     /// Gets the permission manager assosiated with this instance.
@@ -34,7 +29,7 @@ public class PluginManager<T>
     public PluginManager(string directory, string namePattern = "*.dll", PermissionManager permissionManager = null)
     {
         PermissionManager = permissionManager ?? new PermissionManager();
-        Plugins = GetPlugins<T>(directory, namePattern);
+        Plugins = GetPlugins(directory, namePattern);
     }
 
     /// <summary>
@@ -42,83 +37,61 @@ public class PluginManager<T>
     /// </summary>
     /// <param name="directory">Directory of plugin assemblies.</param>
     /// <param name="namePattern">A regex pattern for selecting plugin assemblies.</param>
-    public List<T> AddPlugin(string directory, string namePattern = "*.dll")
+    public List<IPlugin> AddPlugin(string directory, string namePattern = "*.dll")
     {
-        var plugins = GetPlugins<T>(directory, namePattern);
+        var plugins = GetPlugins(directory, namePattern);
         Plugins.AddRange(plugins);
         return plugins;
     }
 
     /// <summary>
-    /// Loads all plugins with the given <typeparamref name="T"/> type.
+    /// Loads all plugins with the <see cref="IPlugin"/> type.
     /// </summary>
-    /// <typeparam name="TPlugin">Type of objects that would be loaded.</typeparam>
     /// <param name="directory">Directory of plugin assemblies.</param>
     /// <param name="namePattern">A regex pattern for selecting plugin assemblies.</param>
     /// <param name="permissionManager">The permision manager that controls the plugin's permissions.
     /// This argument only applies to <see cref="IPlugin"/> managed plugins.</param>
     /// <returns></returns>
-    public static List<TPlugin> GetPlugins<TPlugin>(string directory, string namePattern = "*.dll", PermissionManager permissionManager = null)
-        where TPlugin : new()
+    public List<IPlugin> GetPlugins(string directory, string namePattern = "*.dll")
     {
-        IEnumerable<TPlugin> commands = Directory.EnumerateFiles(directory, namePattern).SelectMany(pluginPath =>
+        List<IPlugin> commands = Directory.EnumerateFiles(directory, namePattern).SelectMany(pluginPath =>
         {
             Assembly pluginAssembly = LoadPlugin(pluginPath);
-            return CreateCommands<TPlugin>(pluginAssembly, permissionManager);
+            return CreateCommands(pluginAssembly);
         }).ToList();
 
-        return (List<TPlugin>)commands;
+        return commands;
     }
 
-    private static Assembly LoadPlugin(string pluginLocation)
+    static Assembly LoadPlugin(string pluginLocation)
     {
-        PluginLoadContext loadContext = new(pluginLocation);
-        return loadContext.LoadFromAssemblyName(AssemblyName.GetAssemblyName(pluginLocation));
+        PluginLoadContext loadContext = new PluginLoadContext(pluginLocation);
+        return loadContext.LoadFromAssemblyName(new AssemblyName(Path.GetFileNameWithoutExtension(pluginLocation)));
     }
 
-    private static IEnumerable<TPlugin> CreateCommands<TPlugin>(Assembly assembly, PermissionManager permissionManager = null)
+    static IEnumerable<IPlugin> CreateCommands(Assembly assembly)
     {
-        lock (lockObj)
+        int count = 0;
+
+        foreach (Type type in assembly.GetTypes())
         {
-            int count = 0;
-            var t = assembly.GetTypes();
-
-            foreach (Type type in assembly.GetTypes())
+            if (typeof(IPlugin).IsAssignableFrom(type))
             {
-                var n = type.FullName;
-                Console.WriteLine(n);
-                if (typeof(TPlugin).IsAssignableFrom(type))
+                IPlugin result = Activator.CreateInstance(type) as IPlugin;
+                if (result != null)
                 {
-                    if (Activator.CreateInstance(type) is TPlugin result)
-                    {
-                        if (result is IPlugin plugin)
-                        {
-                            try
-                            {
-                                permissionManager.RegisterPlugin(plugin);
-                                plugin.OnLoad();
-                                plugin.IsLoaded = true;
-                            }
-                            catch (Exception e)
-                            {
-                                plugin.IsLoaded = false;
-                                plugin.Exception = e;
-                            }
-                        }
-
-                        count++;
-                        yield return result;
-                    }
+                    count++;
+                    yield return result;
                 }
             }
+        }
 
-            if (count == 0)
-            {
-                string availableTypes = string.Join(",", assembly.GetTypes().Select(t => t.FullName));
-                throw new ApplicationException(
-                    $"Can't find any type which implements {typeof(T).Name} in {assembly} from {assembly.Location}.\n" +
-                    $"Available types: {availableTypes}");
-            }
+        if (count == 0)
+        {
+            string availableTypes = string.Join(",", assembly.GetTypes().Select(t => t.FullName));
+            throw new ApplicationException(
+                $"Can't find any type which implements IPlugin in {assembly} from {assembly.Location}.\n" +
+                $"Available types: {availableTypes}");
         }
     }
 }
