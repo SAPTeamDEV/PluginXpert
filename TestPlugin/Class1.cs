@@ -1,24 +1,17 @@
-﻿using SAPTeam.PluginXpert.Types;
+﻿using PluginBase;
+using System;
 
-namespace TestPlugin
+namespace HelloPlugin
 {
-    public class Class1 : Plugin
+    public class HelloCommand : ICommand
     {
-        public override string Name => "Test {;ugin";
-        public override string[] Permissions { get; } = new string[]
-        {
-            "test",
-            "test2"
-        };
+        public string Name { get => "hello"; }
+        public string Description { get => "Displays hello message."; }
 
-        public override void OnLoad()
+        public int Execute()
         {
-            PermissionManager.RequastPermission("test");
-        }
-
-        public override void Run()
-        {
-            
+            Console.WriteLine("Hello !!!");
+            return 0;
         }
     }
 }
