@@ -28,15 +28,24 @@ namespace SAPTeam.PluginXpert
         static string[] GrantedPrefixes = new string[]
         {
             "system.",
-            "microsoft."
+            "microsoft.",
+            "xunit."
         };
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PermissionManager"/> class.
         /// </summary>
-        public PermissionManager()
+        public PermissionManager(string[] grantedNames = null, string[] grantedPrefixes = null)
         {
+            if (grantedNames != null)
+            {
+                GrantedNames = GrantedNames.Concat(grantedNames).ToArray();
+            }
 
+            if (grantedPrefixes != null)
+            {
+                GrantedPrefixes = GrantedPrefixes.Concat(grantedPrefixes).ToArray();
+            }
         }
 
         /// <summary>
