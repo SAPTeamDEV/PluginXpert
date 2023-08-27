@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SAPTeam.PluginXpert
+namespace SAPTeam.PluginXpert.Types
 {
     /// <summary>
     /// Provides standard interface to implement managed plugins.
@@ -24,7 +24,7 @@ namespace SAPTeam.PluginXpert
         /// <summary>
         /// Gets or sets the permission manager assosiated with this instance.
         /// </summary>
-        PermissionManager PermissionManager { get; set; }
+        IPermissionManager PermissionManager { get; set; }
 
         /// <summary>
         /// Gets or sets the load status of this plugin.

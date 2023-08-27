@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SAPTeam.PluginXpert
+namespace SAPTeam.PluginXpert.Types
 {
     /// <summary>
     /// Provides standard base class to implement managed plugin.
@@ -12,13 +12,13 @@ namespace SAPTeam.PluginXpert
     public class Plugin : IPlugin
     {
         /// <inheritdoc/>
-        public string Name { get; }
+        public virtual string Name { get; }
 
         /// <inheritdoc/>
-        public string[] Permissions { get; }
+        public virtual string[] Permissions { get; }
 
         /// <inheritdoc/>
-        public PermissionManager PermissionManager { get; set; }
+        public IPermissionManager PermissionManager { get; set; }
 
         /// <inheritdoc/>
         public bool IsLoaded { get; set; }
@@ -27,13 +27,13 @@ namespace SAPTeam.PluginXpert
         public Exception Exception { get; set; }
 
         /// <inheritdoc/>
-        public void OnLoad()
+        public virtual void OnLoad()
         {
             throw new NotImplementedException();
         }
 
-    /// <inheritdoc/>
-        public void Run()
+        /// <inheritdoc/>
+        public virtual void Run()
         {
             throw new NotImplementedException();
         }

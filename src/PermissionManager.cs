@@ -5,12 +5,14 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
+using SAPTeam.PluginXpert.Types;
+
 namespace SAPTeam.PluginXpert
 {
     /// <summary>
     /// Represents mechanisms to manage plugins permissions.
     /// </summary>
-    public class PermissionManager
+    public class PermissionManager : IPermissionManager
     {
         Dictionary<string, Dictionary<string, bool>> permissions = new Dictionary<string, Dictionary<string, bool>>();
 
@@ -19,7 +21,7 @@ namespace SAPTeam.PluginXpert
         /// </summary>
         public PermissionManager()
         {
-            
+
         }
 
         /// <summary>

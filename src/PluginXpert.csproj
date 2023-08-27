@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net6.0</TargetFrameworks>
+    <TargetFramework>net6.0</TargetFramework>
     <AssemblyName>SAPTeam.PluginXpert</AssemblyName>
     <RootNamespace>$(AssemblyName)</RootNamespace>
     <PackageId>$(AssemblyName)</PackageId>
@@ -39,5 +39,9 @@
       <PackagePath>\</PackagePath>
     </None>
   </ItemGroup>
+    
+    <ItemGroup>
+      <ProjectReference Include="..\PluginXpert.Types\PluginXpert.Types.csproj" />
+    </ItemGroup>
   
 </Project>

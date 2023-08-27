@@ -5,9 +5,11 @@ VisualStudioVersion = 17.7.34009.444
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PluginXpert", "src\PluginXpert.csproj", "{0CC19344-D46B-415A-BC0E-67E8AC628960}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestPlugin", "TestPlugin\TestPlugin.csproj", "{E51FA30E-9EFD-416B-8F2F-32EA3EE696EA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestPlugin", "TestPlugin\TestPlugin.csproj", "{E51FA30E-9EFD-416B-8F2F-32EA3EE696EA}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PluginXpert.Tests", "tests\PluginXpert.Tests.csproj", "{B412A8DC-F0FF-4B89-89A1-DAACBE95C45E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PluginXpert.Types", "PluginXpert.Types\PluginXpert.Types.csproj", "{A1627477-B28F-4CB6-B1A7-BD7C4F743C99}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +29,10 @@ Global
 		{B412A8DC-F0FF-4B89-89A1-DAACBE95C45E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B412A8DC-F0FF-4B89-89A1-DAACBE95C45E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B412A8DC-F0FF-4B89-89A1-DAACBE95C45E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1627477-B28F-4CB6-B1A7-BD7C4F743C99}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1627477-B28F-4CB6-B1A7-BD7C4F743C99}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1627477-B28F-4CB6-B1A7-BD7C4F743C99}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1627477-B28F-4CB6-B1A7-BD7C4F743C99}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

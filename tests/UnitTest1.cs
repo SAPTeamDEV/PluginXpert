@@ -1,5 +1,5 @@
 using SAPTeam.PluginXpert;
-
+using SAPTeam.PluginXpert.Types;
 
 namespace PluginXpert.Tests
 {

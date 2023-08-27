@@ -1,26 +1,22 @@
-﻿using SAPTeam.PluginXpert;
+﻿using SAPTeam.PluginXpert.Types;
 
 namespace TestPlugin
 {
     public class Class1 : Plugin
     {
-        public string Name => "Test {;ugin";
-        public string[] Permissions { get; } = new string[]
+        public override string Name => "Test {;ugin";
+        public override string[] Permissions { get; } = new string[]
         {
             "test",
             "test2"
         };
-        public bool IsLoaded { get; set; }
-        public Exception Exception { get; set; }
 
-        public PermissionManager PermissionManager { get; set; }
-
-        public void OnLoad()
+        public override void OnLoad()
         {
             PermissionManager.RequastPermission("test");
         }
 
-        public void Run()
+        public override void Run()
         {
             
         }
