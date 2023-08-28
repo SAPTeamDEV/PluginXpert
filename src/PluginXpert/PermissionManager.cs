@@ -1,14 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Diagnostics;
 using System.Reflection;
-using System.Diagnostics;
 using System.Security;
-using System.Text;
-using System.Threading.Tasks;
 
 using SAPTeam.PluginXpert.Types;
-using System.Runtime.Versioning;
 
 namespace SAPTeam.PluginXpert
 {
@@ -132,7 +126,7 @@ namespace SAPTeam.PluginXpert
                 {
                     continue;
                 }
-                
+
                 if (GrantedNames.Contains(frameName.ToLower()) || !IsLegalName(frameName))
                 {
                     continue;

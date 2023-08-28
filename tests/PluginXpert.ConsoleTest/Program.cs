@@ -1,12 +1,6 @@
 ﻿using SAPTeam.PluginXpert;
 using SAPTeam.PluginXpert.Types;
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-
 namespace PluginXpert.ConsoleTest
 {
     class Program

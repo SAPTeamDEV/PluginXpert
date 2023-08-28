@@ -1,6 +1,3 @@
-using SAPTeam.PluginXpert;
-using SAPTeam.PluginXpert.Types;
-
 namespace SAPTeam.PluginXpert.Tests
 {
     public class UnitTest1
