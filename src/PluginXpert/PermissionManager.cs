@@ -94,7 +94,8 @@ namespace SAPTeam.PluginXpert
 
             foreach (var frame in frames)
             {
-                var frameName = frame.GetMethod().Module.Name;
+                var frameCaller = frame.GetMethod();
+                var frameName = frameCaller.Module.Name;
                 if (frameName == null)
                 {
                     continue;
@@ -105,7 +106,8 @@ namespace SAPTeam.PluginXpert
                     continue;
                 }
 
-                client = frame.GetMethod();
+                client = frameCaller;
+                break;
             }
 
             if (client == null)
