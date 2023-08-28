@@ -74,15 +74,27 @@ namespace SAPTeam.PluginXpert
         }
 
         /// <summary>
-        /// Requests for an already decleared permission. All permission requests will be accepted by default.
+        /// Checks the privileges of the caller for the giving <paramref name="permission"/>.
         /// </summary>
-        /// <param name="permission">The name of requsted permission.</param>
+        /// <param name="permission">The name of the specific permission.</param>
+        /// <returns></returns>
+        public bool HasPermission(string permission)
+        {
+            string permissionID = GetCallFrame(permission);
+            return permissionID == "internal" || permissions[permissionID][permission];
+        }
+
+        /// <summary>
+        /// Requests for an already declared permission. All permission requests will be accepted by default.
+        /// </summary>
+        /// <param name="permission">The name of the requested permission.</param>
         /// <returns></returns>
         public virtual bool RequestPermission(string permission)
         {
             string permissionID = GetCallFrame(permission);
-
+#if DEBUG
             Console.WriteLine($"Permission {permission} requested by {permissionID}");
+#endif
             return true;
         }
 
