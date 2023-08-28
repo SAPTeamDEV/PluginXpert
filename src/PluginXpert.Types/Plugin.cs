@@ -11,7 +11,7 @@ namespace SAPTeam.PluginXpert.Types
         public virtual string Name { get; }
 
         /// <inheritdoc/>
-        public virtual string[] Permissions { get; }
+        public virtual Permission[] Permissions { get; }
 
         /// <inheritdoc/>
         public IPermissionManager PermissionManager { get; set; }

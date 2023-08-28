@@ -16,7 +16,7 @@ namespace SAPTeam.PluginXpert
         /// </summary>
         public PermissionManager Global { get; set; }
 
-        readonly Dictionary<string, Dictionary<string, bool>> permissions = new Dictionary<string, Dictionary<string, bool>>();
+        readonly Dictionary<string, Dictionary<Permission, bool>> permissions = new Dictionary<string, Dictionary<Permission, bool>>();
 
         /// <summary>
         /// An array of assembly names with unlimited privileges.
@@ -89,16 +89,16 @@ namespace SAPTeam.PluginXpert
         /// <summary>
         /// Checks the privileges of the caller for the giving <paramref name="permission"/>.
         /// </summary>
-        /// <param name="permission">The name of the specific permission.</param>
+        /// <param name="permission">An instance of <see cref="Permission"/> that corresponds to the specific permission.</param>
         /// <returns></returns>
-        public bool HasPermission(string permission)
+        public bool HasPermission(Permission permission)
         {
             string packageName = GetPackageName(permission);
             return packageName == InternalPackageName || permissions[packageName][permission];
         }
 
         /// <inheritdoc/>
-        public virtual bool RequestPermission(string permission)
+        public virtual bool RequestPermission(Permission permission)
         {
             string packageName = GetPackageName(permission);
 #if DEBUG
@@ -110,10 +110,10 @@ namespace SAPTeam.PluginXpert
         /// <summary>
         /// Gets the caller package name.
         /// </summary>
-        /// <param name="permission">The specific permission name to check security attributes of it.</param>
+        /// <param name="permission">The specific permission to check security attributes of it.</param>
         /// <returns>The package name of the caller plugin. if the caller was not a plugin, it returns <see cref="InternalPackageName"/>.</returns>
         /// <exception cref="SecurityException"></exception>
-        protected string GetPackageName(string permission)
+        protected string GetPackageName(Permission permission)
         {
             StackTrace stack = new();
             MethodBase client = null;

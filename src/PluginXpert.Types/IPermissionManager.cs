@@ -8,8 +8,8 @@
         /// <summary>
         /// Requests for an already declared permission.
         /// </summary>
-        /// <param name="permission">The name of requested permission.</param>
+        /// <param name="permission">The requested permission.</param>
         /// <returns></returns>
-        bool RequestPermission(string permission);
+        bool RequestPermission(Permission permission);
     }
 }

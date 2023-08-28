@@ -15,7 +15,7 @@ namespace SAPTeam.PluginXpert.Types
         /// <summary>
         /// Gets an array of the plugin's permissions.
         /// </summary>
-        string[] Permissions { get; }
+        Permission[] Permissions { get; }
 
         /// <summary>
         /// Gets or sets the permission manager assosiated with this instance.
