@@ -9,7 +9,7 @@ namespace SAPTeam.PluginXpert.Types
     /// <summary>
     /// Provides standard base class to implement managed plugin.
     /// </summary>
-    public class Plugin : IPlugin
+    public abstract class Plugin : IPlugin
     {
         /// <inheritdoc/>
         public virtual string Name { get; }
@@ -27,15 +27,9 @@ namespace SAPTeam.PluginXpert.Types
         public Exception Exception { get; set; }
 
         /// <inheritdoc/>
-        public virtual void OnLoad()
-        {
-            throw new NotImplementedException();
-        }
+        public abstract void OnLoad();
 
         /// <inheritdoc/>
-        public virtual void Run()
-        {
-            throw new NotImplementedException();
-        }
+        public abstract void Run();
     }
 }

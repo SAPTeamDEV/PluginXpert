@@ -6,9 +6,9 @@
     public interface IPermissionManager
     {
         /// <summary>
-        /// Requsts for an already decleared permission.
+        /// Requests for an already declared permission.
         /// </summary>
-        /// <param name="permission">The name of requsted permission.</param>
+        /// <param name="permission">The name of requested permission.</param>
         /// <returns></returns>
         bool RequestPermission(string permission);
     }

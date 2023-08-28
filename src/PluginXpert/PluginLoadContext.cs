@@ -3,7 +3,7 @@ using System.Runtime.Loader;
 
 namespace SAPTeam.PluginXpert;
 
-public class PluginLoadContext : AssemblyLoadContext
+internal class PluginLoadContext : AssemblyLoadContext
 {
     private AssemblyDependencyResolver _resolver;
 

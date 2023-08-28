@@ -1,5 +1,4 @@
-﻿
-using SAPTeam.PluginXpert;
+﻿using SAPTeam.PluginXpert;
 using SAPTeam.PluginXpert.Types;
 
 using System;
@@ -8,7 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 
-namespace AppWithPlugin
+namespace PluginXpert.ConsoleTest
 {
     class Program
     {
@@ -46,7 +45,7 @@ namespace AppWithPlugin
                     {
                         Console.WriteLine($"-- {commandName} --");
 
-                        IPlugin command = commands.FirstOrDefault(c => c.Name == commandName);
+                        IPlugin? command = commands.FirstOrDefault(c => c.Name == commandName);
                         if (command == null)
                         {
                             Console.WriteLine("No such command is known.");

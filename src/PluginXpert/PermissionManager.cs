@@ -17,24 +17,43 @@ namespace SAPTeam.PluginXpert
     /// </summary>
     public class PermissionManager : IPermissionManager
     {
-        Dictionary<string, Dictionary<string, bool>> permissions = new Dictionary<string, Dictionary<string, bool>>();
+        /// <summary>
+        /// Gets or sets the global permission manager.
+        /// </summary>
+        public PermissionManager Global { get; set; }
 
-        static string[] GrantedNames = new string[]
+        readonly Dictionary<string, Dictionary<string, bool>> permissions = new Dictionary<string, Dictionary<string, bool>>();
+
+        /// <summary>
+        /// An array of assembly names with unlimited privileges.
+        /// </summary>
+        protected string[] GrantedNames { get; } = new string[]
         {
             Assembly.GetExecutingAssembly().Modules.First().Name.ToLower(), // PluginManager Assembly
             Assembly.GetEntryAssembly().Modules.First().Name.ToLower(), // Application name
         };
 
-        static string[] GrantedPrefixes = new string[]
+        /// <summary>
+        /// An array of assembly prefixes with unlimited privileges.
+        /// </summary>
+        protected string[] GrantedPrefixes { get; } = new string[]
         {
             "system.",
             "microsoft.",
             "xunit."
         };
 
+        const string InternalPackageName = "internal";
+
         /// <summary>
         /// Initializes a new instance of the <see cref="PermissionManager"/> class.
         /// </summary>
+        /// <param name="grantedNames">
+        /// An array of assembly names with unlimited privileges.
+        /// </param>
+        /// <param name="grantedPrefixes">
+        /// An array of assembly prefixes with unlimited privileges.
+        /// </param>
         public PermissionManager(string[] grantedNames = null, string[] grantedPrefixes = null)
         {
             if (grantedNames != null)
@@ -57,17 +76,17 @@ namespace SAPTeam.PluginXpert
             var type = plugin.GetType();
             string moduleName = type.Module.Name;
             string pluginFullname = type.FullName;
-            string permissionID = $"{moduleName}:{pluginFullname}";
+            string packageName = $"{moduleName}:{pluginFullname}";
             if (!IsLegalName(moduleName))
             {
                 throw new SecurityException("Plugin identifier can't start with illegal prefixes.");
             }
 
-            permissions[permissionID] = new();
+            permissions[packageName] = new();
 
             foreach (var perm in plugin.Permissions)
             {
-                permissions[permissionID][perm] = new();
+                permissions[packageName][perm] = new();
             }
 
             plugin.PermissionManager = this;
@@ -80,31 +99,32 @@ namespace SAPTeam.PluginXpert
         /// <returns></returns>
         public bool HasPermission(string permission)
         {
-            string permissionID = GetCallFrame(permission);
-            return permissionID == "internal" || permissions[permissionID][permission];
+            string packageName = GetPackageName(permission);
+            return packageName == InternalPackageName || permissions[packageName][permission];
         }
 
-        /// <summary>
-        /// Requests for an already declared permission. All permission requests will be accepted by default.
-        /// </summary>
-        /// <param name="permission">The name of the requested permission.</param>
-        /// <returns></returns>
+        /// <inheritdoc/>
         public virtual bool RequestPermission(string permission)
         {
-            string permissionID = GetCallFrame(permission);
+            string packageName = GetPackageName(permission);
 #if DEBUG
-            Console.WriteLine($"Permission {permission} requested by {permissionID}");
+            Console.WriteLine($"Permission {permission} requested by {packageName}");
 #endif
             return true;
         }
 
-        protected string GetCallFrame(string permission)
+        /// <summary>
+        /// Gets the caller package name.
+        /// </summary>
+        /// <param name="permission">The specific permission name to check security attributes of it.</param>
+        /// <returns>The package name of the caller plugin. if the caller was not a plugin, it returns <see cref="InternalPackageName"/>.</returns>
+        /// <exception cref="SecurityException"></exception>
+        protected string GetPackageName(string permission)
         {
             StackTrace stack = new();
-            var frames = stack.GetFrames();
             MethodBase client = null;
 
-            foreach (var frame in frames)
+            foreach (var frame in stack.GetFrames())
             {
                 var frameCaller = frame.GetMethod();
                 var frameName = frameCaller.Module.Name;
@@ -125,26 +145,31 @@ namespace SAPTeam.PluginXpert
             if (client == null)
             {
                 // Everything is good, maybe...
-                return "internal";
+                return InternalPackageName;
             }
 
-            string permissionID = $"{client.Module.Name}:{client.DeclaringType.FullName}";
+            string packageName = $"{client.Module.Name}:{client.DeclaringType.FullName}";
 
-            if (!permissions.ContainsKey(permissionID))
+            if (!permissions.ContainsKey(packageName))
             {
-                throw new SecurityException($"The plugin \"{permissionID}\" is not registered.");
+                throw new SecurityException($"The plugin \"{packageName}\" is not registered.");
             }
 
-            var permissionStore = permissions[permissionID];
+            var permissionStore = permissions[packageName];
 
             if (!permissionStore.ContainsKey(permission))
             {
-                throw new SecurityException($"The permission \"{permission}\" is not registered for the plugin: {permissionID}");
+                throw new SecurityException($"The permission \"{permission}\" is not registered for the plugin: {packageName}");
             }
 
-            return permissionID;
+            return packageName;
         }
 
+        /// <summary>
+        /// Checks the availability of the plugin name.
+        /// </summary>
+        /// <param name="pluginName">The name of the plugin file name.</param>
+        /// <returns><see langword="true"/> if the plugin name is not starts with the denied prefixes (such as System. or Microsoft.) otherwise returns <see langword="false"/>.</returns>
         protected bool IsLegalName(string pluginName)
         {
             foreach (var name in GrantedPrefixes)

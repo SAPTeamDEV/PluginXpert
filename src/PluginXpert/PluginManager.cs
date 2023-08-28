@@ -9,7 +9,7 @@ namespace SAPTeam.PluginXpert;
 /// </summary>
 public class PluginManager
 {
-    public static PluginManager Global { get; set; }
+    bool throwOnFail;
 
     /// <summary>
     /// Gets the list of loaded plugins.
@@ -17,18 +17,20 @@ public class PluginManager
     public List<IPlugin> Plugins { get; }
 
     /// <summary>
-    /// Gets the permission manager assosiated with this instance.
+    /// Gets the permission manager associated with this instance.
     /// </summary>
     public PermissionManager PermissionManager { get; }
 
     /// <summary>
-    /// Creates a new instance of the <see cref="PluginManager{T}"/> and loads plugins.
+    /// Creates a new instance of the <see cref="PluginManager"/> and loads plugins.
     /// </summary>
     /// <param name="directory">Directory of plugin assemblies.</param>
     /// <param name="namePattern">A regex pattern for selecting plugin assemblies.</param>
-    /// <param name="permissionManager">The permision manager that controls the plugin's permissions.</param>
-    public PluginManager(string directory, string namePattern = "*.dll", PermissionManager permissionManager = null)
+    /// <param name="permissionManager">The permission manager that controls the plugin's permissions.</param>
+    /// <param name="throwOnFail">Determines whether this instance should throw an error when a plugin can't be loaded.</param>
+    public PluginManager(string directory, string namePattern = "*.dll", PermissionManager permissionManager = null, bool throwOnFail = false)
     {
+        this.throwOnFail = throwOnFail;
         PermissionManager = permissionManager ?? new PermissionManager();
         Plugins = GetPlugins(directory, namePattern);
     }
@@ -50,8 +52,6 @@ public class PluginManager
     /// </summary>
     /// <param name="directory">Directory of plugin assemblies.</param>
     /// <param name="namePattern">A regex pattern for selecting plugin assemblies.</param>
-    /// <param name="permissionManager">The permision manager that controls the plugin's permissions.
-    /// This argument only applies to <see cref="IPlugin"/> managed plugins.</param>
     /// <returns></returns>
     public List<IPlugin> GetPlugins(string directory, string namePattern = "*.dll")
     {
@@ -81,9 +81,22 @@ public class PluginManager
                 IPlugin result = Activator.CreateInstance(type) as IPlugin;
                 if (result != null)
                 {
-                    PermissionManager.RegisterPlugin(result);
-                    result.OnLoad();
-                    result.IsLoaded = true;
+                    try
+                    {
+                        PermissionManager.RegisterPlugin(result);
+                        result.OnLoad();
+                        result.IsLoaded = true;
+                    }
+                    catch (Exception e)
+                    {
+                        result.IsLoaded = false;
+                        result.Exception = e;
+
+                        if (throwOnFail)
+                        {
+                            throw;
+                        }
+                    }
 
                     count++;
                     yield return result;

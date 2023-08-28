@@ -1,7 +1,7 @@
 using SAPTeam.PluginXpert;
 using SAPTeam.PluginXpert.Types;
 
-namespace PluginXpert.Tests
+namespace SAPTeam.PluginXpert.Tests
 {
     public class UnitTest1
     {
@@ -14,7 +14,7 @@ namespace PluginXpert.Tests
         [Fact]
         public void Test1()
         {
-            var pm = new PluginManager(pluginPath.Replace('\\', Path.DirectorySeparatorChar), "TestPlugin.dll", new PermissionManager(new string[] {GetType().Module.Name.ToLower()}));
+            var pm = new PluginManager(pluginPath.Replace('\\', Path.DirectorySeparatorChar), "TestPlugin.dll", new PermissionManager(new string[] { GetType().Module.Name.ToLower() }));
         }
     }
 }
