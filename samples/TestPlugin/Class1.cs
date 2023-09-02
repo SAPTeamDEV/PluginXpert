@@ -5,15 +5,15 @@ namespace TestPlugin
     public class Class1 : Plugin
     {
         public override string Name => "TestPlugin";
-        public override Permission[] Permissions { get; } = new Permission[]
+        public override string[] Permissions { get; } = new string[]
         {
-            new Permission("plugin", "test"),
-            new Permission("plugin", "test2")
+            "plugin:test",
+            "plugin:test2"
         };
 
         public override void OnLoad()
         {
-            PermissionManager.RequestPermission(Permissions[0]);
+            PermissionManager.RequestPermission(PermissionManager.GetPermission(Permissions[0]));
         }
 
         public override void Run()

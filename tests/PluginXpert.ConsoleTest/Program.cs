@@ -21,7 +21,10 @@ namespace PluginXpert.ConsoleTest
                     Console.ReadLine();
                 }
 
-                var pm = new PluginManager(pluginPath.Replace('\\', Path.DirectorySeparatorChar), "TestPlugin.dll");
+                var perm = new PermissionManager();
+                perm.RegisterPermission(new("plugin", "test", "test"));
+
+                var pm = new PluginManager(pluginPath.Replace('\\', Path.DirectorySeparatorChar), "TestPlugin.dll", throwOnFail: true);
 
                 var commands = pm.Plugins;
 

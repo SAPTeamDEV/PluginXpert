@@ -16,7 +16,12 @@ namespace SAPTeam.PluginXpert
         /// </summary>
         public PermissionManager Global { get; set; }
 
-        readonly Dictionary<string, Dictionary<Permission, bool>> permissions = new Dictionary<string, Dictionary<Permission, bool>>();
+        /// <summary>
+        /// Get a dictionary containing declared permissions.
+        /// </summary>
+        static Dictionary<string, Permission> DeclaredPermissions { get; } = new Dictionary<string, Permission>();
+
+        readonly Dictionary<string, Dictionary<string, bool>> permissions = new Dictionary<string, Dictionary<string, bool>>();
 
         /// <summary>
         /// An array of assembly names with unlimited privileges.
@@ -91,10 +96,35 @@ namespace SAPTeam.PluginXpert
         /// </summary>
         /// <param name="permission">An instance of <see cref="Permission"/> that corresponds to the specific permission.</param>
         /// <returns></returns>
-        public bool HasPermission(Permission permission)
+        public virtual bool HasPermission(Permission permission)
         {
             string packageName = GetPackageName(permission);
             return packageName == InternalPackageName || permissions[packageName][permission];
+        }
+
+        /// <summary>
+        /// Adds the given <paramref name="permission"/> to the <see cref="DeclaredPermissions"/>.
+        /// </summary>
+        /// <param name="permission">An instance of the <see cref="Permission"/> with all properties.</param>
+        public void RegisterPermission(Permission permission)
+        {
+            if (!DeclaredPermissions.ContainsKey(permission.ToString()))
+            {
+                DeclaredPermissions[permission.ToString()] = permission;
+            }
+        }
+
+        /// <inheritdoc/>
+        public Permission GetPermission(string permissionName)
+        {
+            if (DeclaredPermissions.ContainsKey(permissionName))
+            {
+                return DeclaredPermissions[permissionName];
+            }
+            else
+            {
+                throw new SecurityException($"The permission {permissionName} is not declared.");
+            }
         }
 
         /// <inheritdoc/>
