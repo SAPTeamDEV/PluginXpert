@@ -32,8 +32,8 @@ namespace SAPTeam.PluginXpert.Types
         /// <param name="description">The friendly name of the permission.</param>
         public Permission(string scope, string name, string description)
         {
-            Scope = scope;
-            Name = name;
+            Scope = scope.ToLower();
+            Name = name.ToLower();
             Description = description;
         }
 
