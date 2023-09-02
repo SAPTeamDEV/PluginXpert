@@ -106,7 +106,7 @@ namespace SAPTeam.PluginXpert
         /// Adds the given <paramref name="permission"/> to the <see cref="DeclaredPermissions"/>.
         /// </summary>
         /// <param name="permission">An instance of the <see cref="Permission"/> with all properties.</param>
-        public void RegisterPermission(Permission permission)
+        public static void RegisterPermission(Permission permission)
         {
             if (!DeclaredPermissions.ContainsKey(permission.ToString()))
             {
@@ -114,8 +114,12 @@ namespace SAPTeam.PluginXpert
             }
         }
 
-        /// <inheritdoc/>
-        public Permission GetPermission(string permissionName)
+        /// <summary>
+        /// Gets the corresponding permission object.
+        /// </summary>
+        /// <param name="permissionName">The fully-qualified name of the permission.</param>
+        /// <returns>An instance of <see cref="Permission"/> or a <see cref="SecurityException"/> when the requested permission is not declared.</returns>
+        public static Permission GetPermissionStatic(string permissionName)
         {
             if (DeclaredPermissions.ContainsKey(permissionName))
             {
@@ -125,6 +129,12 @@ namespace SAPTeam.PluginXpert
             {
                 throw new SecurityException($"The permission {permissionName} is not declared.");
             }
+        }
+
+        /// <inheritdoc/>
+        public Permission GetPermission(string permissionName)
+        {
+            return GetPermissionStatic(permissionName);
         }
 
         /// <inheritdoc/>
