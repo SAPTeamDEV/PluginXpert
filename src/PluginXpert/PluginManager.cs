@@ -12,9 +12,26 @@ public class PluginManager
     bool throwOnFail;
 
     /// <summary>
-    /// Gets the list of loaded plugins.
+    /// Gets the list of all plugins.
     /// </summary>
     public List<IPlugin> Plugins { get; }
+
+    /// <summary>
+    /// Gets a list of plugins with <see cref="IPlugin.IsLoaded"/> property.
+    /// </summary>
+    public IEnumerable<IPlugin> ValidPlugins
+    {
+        get
+        {
+            foreach (var plugin in Plugins)
+            {
+                if (plugin.IsLoaded)
+                {
+                    yield return plugin;
+                }
+            }
+        }
+    }
 
     /// <summary>
     /// Gets the permission manager associated with this instance.

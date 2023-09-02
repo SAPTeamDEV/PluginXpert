@@ -26,7 +26,7 @@ namespace PluginXpert.ConsoleTest
 
                 var pm = new PluginManager(pluginPath.Replace('\\', Path.DirectorySeparatorChar), "TestPlugin.dll", throwOnFail: true);
 
-                var commands = pm.Plugins;
+                var commands = pm.ValidPlugins;
 
                 if (args.Length == 0)
                 {
