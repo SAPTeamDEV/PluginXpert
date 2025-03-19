@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using System.Text.RegularExpressions;
 
 using SAPTeam.PluginXpert.Types;
 
@@ -14,7 +15,7 @@ public class PluginManager
     /// <summary>
     /// Gets the list of all plugins.
     /// </summary>
-    public List<IPlugin> Plugins { get; }
+    public List<IPlugin> Plugins { get; } = new();
 
     /// <summary>
     /// Gets a list of plugins with <see cref="IPlugin.IsLoaded"/> property.
@@ -39,17 +40,26 @@ public class PluginManager
     public PermissionManager PermissionManager { get; }
 
     /// <summary>
-    /// Creates a new instance of the <see cref="PluginManager"/> and loads plugins.
+    /// Creates a new instance of the <see cref="PluginManager"/> class.
+    /// </summary>
+    /// <param name="permissionManager">The permission manager that controls the plugin's permissions.</param>
+    /// <param name="throwOnFail">Determines whether this instance should throw an error when a plugin can't be loaded.</param>
+    public PluginManager(PermissionManager permissionManager = null, bool throwOnFail = false)
+    {
+        this.throwOnFail = throwOnFail;
+        PermissionManager = permissionManager ?? new PermissionManager();
+    }
+
+    /// <summary>
+    /// Creates a new instance of the <see cref="PluginManager"/> class and loads plugins.
     /// </summary>
     /// <param name="directory">Directory of plugin assemblies.</param>
     /// <param name="namePattern">A regex pattern for selecting plugin assemblies.</param>
     /// <param name="permissionManager">The permission manager that controls the plugin's permissions.</param>
     /// <param name="throwOnFail">Determines whether this instance should throw an error when a plugin can't be loaded.</param>
-    public PluginManager(string directory, string namePattern = "*.dll", PermissionManager permissionManager = null, bool throwOnFail = false)
+    public PluginManager(string directory, string namePattern = "*.dll", PermissionManager permissionManager = null, bool throwOnFail = false) : this(permissionManager, throwOnFail)
     {
-        this.throwOnFail = throwOnFail;
-        PermissionManager = permissionManager ?? new PermissionManager();
-        Plugins = GetPlugins(directory, namePattern);
+        AddPlugin(directory, namePattern);
     }
 
     /// <summary>
@@ -72,27 +82,29 @@ public class PluginManager
     /// <returns></returns>
     public List<IPlugin> GetPlugins(string directory, string namePattern = "*.dll")
     {
-        List<IPlugin> commands = Directory.EnumerateFiles(directory, namePattern).SelectMany(pluginPath =>
+        List<IPlugin> plugins = Directory.EnumerateFiles(directory, namePattern).SelectMany(pluginPath =>
         {
-            Assembly pluginAssembly = LoadPlugin(pluginPath);
-            return CreateCommands(pluginAssembly);
+            Assembly pluginAssembly = LoadAssembly(pluginPath);
+            return InitializePlugins(pluginAssembly, ".*");
         }).ToList();
 
-        return commands;
+        return plugins;
     }
 
-    Assembly LoadPlugin(string pluginLocation)
+    private static Assembly LoadAssembly(string pluginLocation)
     {
         PluginLoadContext loadContext = new PluginLoadContext(pluginLocation);
         return loadContext.LoadFromAssemblyName(new AssemblyName(Path.GetFileNameWithoutExtension(pluginLocation)));
     }
 
-    IEnumerable<IPlugin> CreateCommands(Assembly assembly)
+    IEnumerable<IPlugin> InitializePlugins(Assembly assembly, string searchPattern)
     {
         int count = 0;
 
         foreach (Type type in assembly.GetTypes())
         {
+            if (!Regex.IsMatch(type.Name, searchPattern)) continue;
+
             if (typeof(IPlugin).IsAssignableFrom(type))
             {
                 IPlugin result = Activator.CreateInstance(type) as IPlugin;
