@@ -10,19 +10,20 @@ namespace SAPTeam.PluginXpert;
 /// <summary>
 /// Represents methods for loading managed plugins.
 /// </summary>
-public class PluginManager
+public class PluginManager<T>
+    where T : IPlugin
 {
     bool throwOnFail;
 
     /// <summary>
     /// Gets the list of all plugins.
     /// </summary>
-    public List<IPlugin> Plugins { get; } = new();
+    public List<T> Plugins { get; } = new();
 
     /// <summary>
     /// Gets a list of plugins with <see cref="IPlugin.IsLoaded"/> property.
     /// </summary>
-    public IEnumerable<IPlugin> ValidPlugins
+    public IEnumerable<T> ValidPlugins
     {
         get
         {
@@ -42,7 +43,7 @@ public class PluginManager
     public PermissionManager PermissionManager { get; }
 
     /// <summary>
-    /// Creates a new instance of the <see cref="PluginManager"/> class.
+    /// Creates a new instance of the <see cref="PluginManager{T}"/> class.
     /// </summary>
     /// <param name="permissionManager">The permission manager that controls the plugin's permissions.</param>
     /// <param name="throwOnFail">Determines whether this instance should throw an error when a plugin can't be loaded.</param>
@@ -53,7 +54,7 @@ public class PluginManager
     }
 
     /// <summary>
-    /// Creates a new instance of the <see cref="PluginManager"/> class and loads plugins.
+    /// Creates a new instance of the <see cref="PluginManager{T}"/> class and loads plugins.
     /// </summary>
     /// <param name="directory">Directory of plugin assemblies.</param>
     /// <param name="namePattern">A regex pattern for selecting plugin assemblies.</param>
@@ -65,7 +66,7 @@ public class PluginManager
     }
 
     /// <summary>
-    /// Creates a new instance of the <see cref="PluginManager"/> class and loads plugins.
+    /// Creates a new instance of the <see cref="PluginManager{T}"/> class and loads plugins.
     /// </summary>
     /// <param name="bundle">An eSign bundle with valid structure.</param>
     /// <param name="permissionManager">The permission manager that controls the plugin's permissions.</param>
@@ -80,7 +81,7 @@ public class PluginManager
     /// </summary>
     /// <param name="directory">Directory of plugin assemblies.</param>
     /// <param name="namePattern">A regex pattern for selecting plugin assemblies.</param>
-    public List<IPlugin> AddPlugin(string directory, string namePattern = "*.dll")
+    public List<T> AddPlugin(string directory, string namePattern = "*.dll")
     {
         var plugins = GetPlugins(directory, namePattern);
         Plugins.AddRange(plugins);
@@ -93,9 +94,9 @@ public class PluginManager
     /// <param name="directory">Directory of plugin assemblies.</param>
     /// <param name="namePattern">A regex pattern for selecting plugin assemblies.</param>
     /// <returns></returns>
-    public List<IPlugin> GetPlugins(string directory, string namePattern = "*.dll")
+    public List<T> GetPlugins(string directory, string namePattern = "*.dll")
     {
-        List<IPlugin> plugins = Directory.EnumerateFiles(directory, namePattern).SelectMany(pluginPath =>
+        List<T> plugins = Directory.EnumerateFiles(directory, namePattern).SelectMany(pluginPath =>
         {
             Assembly pluginAssembly = LoadAssembly(pluginPath);
             return InitializePlugins(pluginAssembly, ".*");
@@ -110,7 +111,7 @@ public class PluginManager
         return loadContext.LoadFromAssemblyName(new AssemblyName(Path.GetFileNameWithoutExtension(pluginLocation)));
     }
 
-    IEnumerable<IPlugin> InitializePlugins(Assembly assembly, string searchPattern)
+    IEnumerable<T> InitializePlugins(Assembly assembly, string searchPattern)
     {
         int count = 0;
 
@@ -118,9 +119,9 @@ public class PluginManager
         {
             if (!Regex.IsMatch(type.Name, searchPattern)) continue;
 
-            if (typeof(IPlugin).IsAssignableFrom(type))
+            if (typeof(T).IsAssignableFrom(type))
             {
-                IPlugin result = Activator.CreateInstance(type) as IPlugin;
+                T result = (T)Activator.CreateInstance(type);
                 if (result != null)
                 {
                     try
