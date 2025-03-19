@@ -5,7 +5,8 @@ namespace SAPTeam.PluginXpert.Types
     /// <summary>
     /// Provides standard interface to implement managed plugins.
     /// </summary>
-    public interface IPlugin
+    public interface IPlugin<T>
+        where T : IGateway
     {
         /// <summary>
         /// Gets the name of this plugin.
@@ -18,24 +19,12 @@ namespace SAPTeam.PluginXpert.Types
         string[] Permissions { get; }
 
         /// <summary>
-        /// Gets or sets the permission manager assosiated with this instance.
-        /// </summary>
-        IPermissionManager PermissionManager { get; set; }
-
-        /// <summary>
-        /// Gets or sets the load status of this plugin.
-        /// </summary>
-        bool IsLoaded { get; set; }
-
-        /// <summary>
-        /// Gets or sets the exception of this plugin.
-        /// </summary>
-        Exception Exception { get; set; }
-
-        /// <summary>
         /// Executed right after loading the plugin.
         /// </summary>
-        void OnLoad();
+        /// <param name="gateway">
+        /// The gateway to communicate with host.
+        /// </param>
+        void OnLoad(T gateway);
 
         /// <summary>
         /// The executive codes of plugin placed in this method. This method called manually by the host application request.

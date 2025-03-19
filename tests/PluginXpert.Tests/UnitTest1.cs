@@ -13,7 +13,7 @@ namespace SAPTeam.PluginXpert.Tests
         [Fact]
         public void Test1()
         {
-            var pm = new PluginManager<IPlugin>(pluginPath.Replace('\\', Path.DirectorySeparatorChar), "TestPlugin.dll", new PermissionManager(new string[] { GetType().Module.Name.ToLower() }));
+            var pm = new PluginManager<IPlugin<IGateway>, IGateway>(pluginPath.Replace('\\', Path.DirectorySeparatorChar), "TestPlugin.dll", new PermissionManager(new string[] { GetType().Module.Name.ToLower() }));
         }
     }
 }

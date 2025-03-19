@@ -17,8 +17,8 @@ namespace SAPTeam.PluginXpert.Types
         /// <summary>
         /// Gets the corresponding permission object.
         /// </summary>
-        /// <param name="permissionName">The fully-qualified name of the permission.</param>
+        /// <param name="permissionNames">The fully-qualified name of the permission.</param>
         /// <returns>An instance of <see cref="Permission"/> or a <see cref="SecurityException"/> when the requested permission is not declared.</returns>
-        Permission GetPermission(string permissionName);
+        Permission[] GetPermissions(params string[] permissionNames);
     }
 }

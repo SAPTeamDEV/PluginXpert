@@ -23,16 +23,16 @@ namespace PluginXpert.ConsoleTest
 
                 PermissionManager.RegisterPermission(new("plugin", "test", "test"));
 
-                var pm = new PluginManager<IPlugin>(pluginPath.Replace('\\', Path.DirectorySeparatorChar), "TestPlugin.dll", throwOnFail: true);
+                var pm = new PluginManager<IPlugin<IGateway>, IGateway>(pluginPath.Replace('\\', Path.DirectorySeparatorChar), "TestPlugin.dll", throwOnFail: true);
 
                 var commands = pm.ValidPlugins;
 
                 if (args.Length == 0)
                 {
                     Console.WriteLine("Commands: ");
-                    foreach (IPlugin command in commands)
+                    foreach (var command in commands)
                     {
-                        Console.WriteLine($"{command.Name}");
+                        Console.WriteLine($"{command.Instance.Name}");
                     }
                 }
                 else
@@ -41,14 +41,14 @@ namespace PluginXpert.ConsoleTest
                     {
                         Console.WriteLine($"-- {commandName} --");
 
-                        IPlugin? command = commands.FirstOrDefault(c => c.Name == commandName);
+                        var command = commands.FirstOrDefault(c => c.Instance.Name == commandName);
                         if (command == null)
                         {
                             Console.WriteLine("No such command is known.");
                             return;
                         }
 
-                        command.Run();
+                        command.Instance.Run();
 
                         Console.WriteLine();
                     }

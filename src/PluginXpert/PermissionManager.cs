@@ -12,11 +12,6 @@ namespace SAPTeam.PluginXpert
     public class PermissionManager : IPermissionManager
     {
         /// <summary>
-        /// Gets or sets the global permission manager.
-        /// </summary>
-        public PermissionManager Global { get; set; }
-
-        /// <summary>
         /// Get a dictionary containing declared permissions.
         /// </summary>
         static Dictionary<string, Permission> DeclaredPermissions { get; } = new Dictionary<string, Permission>();
@@ -70,7 +65,8 @@ namespace SAPTeam.PluginXpert
         /// Registers a new plugin in plugin store.
         /// </summary>
         /// <param name="plugin">A managed plugin instance</param>
-        public virtual void RegisterPlugin(IPlugin plugin)
+        /// <param name="pluginPermissions">Permissions declared by the plugin</param>
+        public virtual string RegisterPlugin(object plugin, Permission[] pluginPermissions)
         {
             var type = plugin.GetType();
             string moduleName = type.Module.Name;
@@ -83,12 +79,12 @@ namespace SAPTeam.PluginXpert
 
             permissions[packageName] = new();
 
-            foreach (var perm in plugin.Permissions)
+            foreach (var perm in pluginPermissions)
             {
-                permissions[packageName][perm] = new();
+                permissions[packageName][perm] = false;
             }
 
-            plugin.PermissionManager = this;
+            return packageName;
         }
 
         /// <summary>
@@ -117,24 +113,31 @@ namespace SAPTeam.PluginXpert
         /// <summary>
         /// Gets the corresponding permission object.
         /// </summary>
-        /// <param name="permissionName">The fully-qualified name of the permission.</param>
+        /// <param name="permissionNames">The fully-qualified name of the permission.</param>
         /// <returns>An instance of <see cref="Permission"/> or a <see cref="SecurityException"/> when the requested permission is not declared.</returns>
-        public static Permission GetPermissionStatic(string permissionName)
+        public static Permission[] GetPermissionsStatic(params string[] permissionNames)
         {
-            if (DeclaredPermissions.ContainsKey(permissionName))
+            List<Permission> permissions = new List<Permission>();
+
+            foreach (var permissionName in permissionNames)
             {
-                return DeclaredPermissions[permissionName];
+                if (DeclaredPermissions.ContainsKey(permissionName))
+                {
+                    permissions.Add(DeclaredPermissions[permissionName]);
+                }
+                else
+                {
+                    throw new SecurityException($"The permission {permissionName} is not declared.");
+                }
             }
-            else
-            {
-                throw new SecurityException($"The permission {permissionName} is not declared.");
-            }
+
+            return permissions.ToArray();
         }
 
         /// <inheritdoc/>
-        public Permission GetPermission(string permissionName)
+        public Permission[] GetPermissions(params string[] permissionNames)
         {
-            return GetPermissionStatic(permissionName);
+            return GetPermissionsStatic(permissionNames);
         }
 
         /// <inheritdoc/>

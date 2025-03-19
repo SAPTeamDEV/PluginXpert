@@ -10,20 +10,21 @@ namespace SAPTeam.PluginXpert;
 /// <summary>
 /// Represents methods for loading managed plugins.
 /// </summary>
-public class PluginManager<T>
-    where T : IPlugin
+public class PluginManager<T, TGateway>
+    where T : IPlugin<TGateway>
+    where TGateway : IGateway
 {
     bool throwOnFail;
 
     /// <summary>
     /// Gets the list of all plugins.
     /// </summary>
-    public List<T> Plugins { get; } = new();
+    public List<PluginContext<T, TGateway>> Plugins { get; } = new();
 
     /// <summary>
-    /// Gets a list of plugins with <see cref="IPlugin.IsLoaded"/> property.
+    /// Gets a list of all properly loaded plugins.
     /// </summary>
-    public IEnumerable<T> ValidPlugins
+    public IEnumerable<PluginContext<T, TGateway>> ValidPlugins
     {
         get
         {
@@ -81,7 +82,7 @@ public class PluginManager<T>
     /// </summary>
     /// <param name="directory">Directory of plugin assemblies.</param>
     /// <param name="namePattern">A regex pattern for selecting plugin assemblies.</param>
-    public List<T> AddPlugin(string directory, string namePattern = "*.dll")
+    public List<PluginContext<T, TGateway>> AddPlugin(string directory, string namePattern = "*.dll")
     {
         var plugins = GetPlugins(directory, namePattern);
         Plugins.AddRange(plugins);
@@ -94,9 +95,9 @@ public class PluginManager<T>
     /// <param name="directory">Directory of plugin assemblies.</param>
     /// <param name="namePattern">A regex pattern for selecting plugin assemblies.</param>
     /// <returns></returns>
-    public List<T> GetPlugins(string directory, string namePattern = "*.dll")
+    public List<PluginContext<T, TGateway>> GetPlugins(string directory, string namePattern = "*.dll")
     {
-        List<T> plugins = Directory.EnumerateFiles(directory, namePattern).SelectMany(pluginPath =>
+        List<PluginContext<T, TGateway>> plugins = Directory.EnumerateFiles(directory, namePattern).SelectMany(pluginPath =>
         {
             Assembly pluginAssembly = LoadAssembly(pluginPath);
             return InitializePlugins(pluginAssembly, ".*");
@@ -111,7 +112,7 @@ public class PluginManager<T>
         return loadContext.LoadFromAssemblyName(new AssemblyName(Path.GetFileNameWithoutExtension(pluginLocation)));
     }
 
-    IEnumerable<T> InitializePlugins(Assembly assembly, string searchPattern)
+    IEnumerable<PluginContext<T, TGateway>> InitializePlugins(Assembly assembly, string searchPattern)
     {
         int count = 0;
 
@@ -124,25 +125,11 @@ public class PluginManager<T>
                 T result = (T)Activator.CreateInstance(type);
                 if (result != null)
                 {
-                    try
-                    {
-                        PermissionManager.RegisterPlugin(result);
-                        result.OnLoad();
-                        result.IsLoaded = true;
-                    }
-                    catch (Exception e)
-                    {
-                        result.IsLoaded = false;
-                        result.Exception = e;
-
-                        if (throwOnFail)
-                        {
-                            throw;
-                        }
-                    }
+                    PluginContext<T, TGateway> context = new(result, this, PermissionManager);
+                    context.LoadPlugin();
 
                     count++;
-                    yield return result;
+                    yield return context;
                 }
             }
         }

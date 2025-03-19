@@ -2,21 +2,20 @@
 
 namespace TestPlugin
 {
-    public class Class1 : Plugin
+    public class Class1 : IPlugin<IGateway>
     {
-        public override string Name => "TestPlugin";
-        public override string[] Permissions { get; } = new string[]
+        public string Name => "TestPlugin";
+        public string[] Permissions { get; } = new string[]
         {
-            "plugin:test",
-            "plugin:test2"
+            "plugin:test"
         };
 
-        public override void OnLoad()
+        public void OnLoad(IGateway gateway)
         {
-            PermissionManager.RequestPermission(PermissionManager.GetPermission(Permissions[0]));
+            gateway.PermissionManager.RequestPermission(gateway.PermissionManager.GetPermissions(Permissions[0])[0]);
         }
 
-        public override void Run()
+        public void Run()
         {
             Console.WriteLine("HIII");
         }
