@@ -10,6 +10,8 @@ namespace SAPTeam.PluginXpert
     {
         public string Id { get; set; }
 
+        public string BuildRef { get; set; }
+
         public Version Version { get; set; }
 
         public string Name { get; set; }
@@ -19,6 +21,8 @@ namespace SAPTeam.PluginXpert
         public string Interface {  get; set; }
 
         public Version InterfaceVersion { get; set; }
+
+        public string TargetFramework { get; set; }
 
         public string Assembly {  get; set; }
 

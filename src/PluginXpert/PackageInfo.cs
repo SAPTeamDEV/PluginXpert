@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SAPTeam.PluginXpert
 {
-    public class PluginIndex
+    public class PackageInfo
     {
         public string Id { get; set; }
 
