@@ -21,7 +21,11 @@ namespace SAPTeam.PluginXpert
 
         private void UpdatePluginIndex(ZipArchive zip)
         {
-            WriteEntry(zip, ".plugins.ec", Export(PluginIndex));
+            var index = Export(PluginIndex);
+
+            Manifest.GetConcurrentDictionary()[".plugins.ec"] = ComputeSHA512Hash(index))
+
+            WriteEntry(zip, ".plugins.ec", index);
         }
 
         protected override void ReadBundle(ZipArchive zip)
