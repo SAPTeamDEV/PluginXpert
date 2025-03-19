@@ -22,7 +22,7 @@ namespace SAPTeam.PluginXpert
 
         public Version InterfaceVersion { get; set; }
 
-        public string TargetFramework { get; set; }
+        public Version TargetFrameworkVersion { get; set; }
 
         public string Assembly {  get; set; }
 

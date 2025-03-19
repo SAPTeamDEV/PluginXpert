@@ -12,6 +12,8 @@ namespace SAPTeam.PluginXpert
 {
     public class PluginPackage : Bundle
     {
+        public const string PackageInfoFileName = ".plugin-package.ec";
+
         public PackageInfo PackageInfo { get; private set; } = new();
 
         public PluginPackage(string containerPath) : base(Path.GetFullPath(containerPath), Path.GetDirectoryName(Path.GetFullPath(containerPath)))
@@ -25,9 +27,14 @@ namespace SAPTeam.PluginXpert
         {
             var index = Export(PackageInfo);
 
-            Manifest.GetConcurrentDictionary()[".plugin-package.ec"] = ComputeSHA512Hash(index);
+            Manifest.GetConcurrentDictionary()[PackageInfoFileName] = ComputeSHA512Hash(index);
 
-            WriteEntry(zip, ".plugin-package.ec", index);
+            WriteEntry(zip, PackageInfoFileName, index);
+        }
+
+        public bool VerifyPackageInfo()
+        {
+            return VerifyFile(PackageInfoFileName);
         }
 
         protected override void ReadBundle(ZipArchive zip)
@@ -35,7 +42,7 @@ namespace SAPTeam.PluginXpert
             base.ReadBundle(zip);
 
             ZipArchiveEntry entry;
-            if ((entry = zip.GetEntry(".plugin-package.ec")) != null)
+            if ((entry = zip.GetEntry(PackageInfoFileName)) != null)
             {
                 PackageInfo = JsonSerializer.Deserialize<PackageInfo>(entry.Open(), options);
             }
