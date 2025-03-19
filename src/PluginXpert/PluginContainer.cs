@@ -17,6 +17,8 @@ namespace SAPTeam.PluginXpert
         public PluginContainer(string containerPath) : base(Path.GetFullPath(containerPath), Path.GetDirectoryName(Path.GetFullPath(containerPath)))
         {
             Updating += UpdatePluginIndex;
+
+            Manifest.BundleFiles = true;
         }
 
         private void UpdatePluginIndex(ZipArchive zip)
