@@ -41,6 +41,7 @@
   </ItemGroup>
     
     <ItemGroup>
+      <ProjectReference Include="..\..\externals\EasySign\EasySign\EasySign.csproj" />
       <ProjectReference Include="..\PluginXpert.Types\PluginXpert.Types.csproj" />
     </ItemGroup>
   

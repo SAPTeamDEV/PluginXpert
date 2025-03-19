@@ -1,6 +1,8 @@
 ﻿using System.Reflection;
 using System.Text.RegularExpressions;
 
+using EasySign;
+
 using SAPTeam.PluginXpert.Types;
 
 namespace SAPTeam.PluginXpert;
@@ -60,6 +62,17 @@ public class PluginManager
     public PluginManager(string directory, string namePattern = "*.dll", PermissionManager permissionManager = null, bool throwOnFail = false) : this(permissionManager, throwOnFail)
     {
         AddPlugin(directory, namePattern);
+    }
+
+    /// <summary>
+    /// Creates a new instance of the <see cref="PluginManager"/> class and loads plugins.
+    /// </summary>
+    /// <param name="bundle">An eSign bundle with valid structure.</param>
+    /// <param name="permissionManager">The permission manager that controls the plugin's permissions.</param>
+    /// <param name="throwOnFail">Determines whether this instance should throw an error when a plugin can't be loaded.</param>
+    public PluginManager(Bundle bundle, PermissionManager permissionManager = null, bool throwOnFail = false) : this(permissionManager, throwOnFail)
+    {
+
     }
 
     /// <summary>
