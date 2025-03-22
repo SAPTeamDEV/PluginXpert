@@ -188,7 +188,10 @@ namespace PluginXpert.Cli
         {
             var blankPlugin = new PluginEntry();
 
-            var jsonData = JsonSerializer.Serialize(pluginConfigDestinationPath);
+            var jsonData = JsonSerializer.Serialize(blankPlugin, new JsonSerializerOptions()
+            {
+                WriteIndented = true,
+            });
             var buffer = Encoding.UTF8.GetBytes(jsonData);
 
             File.WriteAllBytes(pluginConfigDestinationPath, buffer);
@@ -222,7 +225,7 @@ namespace PluginXpert.Cli
                         return;
                     }
 
-                    var assemblyPath = Path.Combine(pluginConfigPath, config.Assembly);
+                    var assemblyPath = Path.Combine(pluginPath, config.Assembly);
                     if (!File.Exists(assemblyPath))
                     {
                         Console.WriteLine("File not found: " + assemblyPath);

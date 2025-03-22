@@ -12,6 +12,6 @@ namespace SAPTeam.PluginXpert
 
         public string Name { get; set; }
 
-        public List<PluginEntry> Plugins { get; set; }
+        public List<PluginEntry> Plugins { get; set; } = new List<PluginEntry>();
     }
 }
