@@ -21,6 +21,8 @@ public class PluginManager<TPlugin, TGateway>
 
     public virtual Version Version => new Version(2, 0);
 
+    public List<string> TemporaryDirectories { get; } = new List<string>();
+
     /// <summary>
     /// Gets the list of all plugins.
     /// </summary>
@@ -143,22 +145,29 @@ public class PluginManager<TPlugin, TGateway>
         if (chosenEntries.Count == 0) throw new ArgumentException("Can't find any suitable plugins in this package");
 
         var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        TemporaryDirectories.Add(tempPath);
 
         List<PluginContext<TPlugin, TGateway>> plugins = new();
         foreach (var entry in chosenEntries)
         {
-            var pluginPath = Path.Combine(tempPath, Guid.NewGuid().ToString());
+            Directory.CreateDirectory(tempPath);
 
-            Directory.CreateDirectory(pluginPath);
+            package.ExtractPlugin(entry, tempPath);
 
-            package.ExtractPlugin(entry, pluginPath);
-
-            var assembly = LoadAssembly(Path.Combine(pluginPath, $"{entry.Id}-{entry.BuildRef}", entry.Assembly));
+            var assembly = LoadAssembly(Path.Combine(tempPath, $"{entry.Id}-{entry.BuildRef}", entry.Assembly));
 
             plugins.AddRange(InitializePlugins(assembly, entry.Class, package));
         }
 
         return plugins.ToArray();
+    }
+
+    public void Cleanup()
+    {
+        foreach (var dir in TemporaryDirectories)
+        {
+            Directory.Delete(dir, true);
+        }
     }
 
     private static Assembly LoadAssembly(string pluginLocation)
