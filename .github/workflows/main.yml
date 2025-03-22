@@ -11,10 +11,7 @@ on:
         description: Deploy package to NuGet gallery
         type: boolean
         default: true
-  push:
-    paths:
-      - 'src/**'
-    branches: [master, dev]
+  
   pull_request:
     branches: [master]
     
