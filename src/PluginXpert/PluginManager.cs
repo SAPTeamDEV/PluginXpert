@@ -153,7 +153,7 @@ public class PluginManager<TPlugin, TGateway>
 
             package.ExtractPlugin(entry, pluginPath);
 
-            var assembly = LoadAssembly(Path.Combine(pluginPath, entry.Assembly));
+            var assembly = LoadAssembly(Path.Combine(pluginPath, $"{entry.Id}-{entry.BuildRef}", entry.Assembly));
 
             plugins.AddRange(InitializePlugins(assembly, entry.Class, package));
         }
