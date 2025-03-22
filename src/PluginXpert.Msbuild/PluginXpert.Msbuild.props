@@ -1,0 +1,10 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PluginPackageId Condition="$(PluginPackageId) == ''"></PluginPackageId>
+    <PluginPackageOutput Condition="$(PluginPackageOutput) == ''"></PluginPackageOutput>
+    <PluginPackageName Condition="$(PluginPackageName) == ''"></PluginPackageName>
+  </PropertyGroup>
+  <PropertyGroup>
+    <CoverletToolsPath Condition=" '$(CoverletToolsPath)' == '' ">$(MSBuildThisFileDirectory)..\tasks\net6.0\</CoverletToolsPath>
+  </PropertyGroup>
+</Project>
