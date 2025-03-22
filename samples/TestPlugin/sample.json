@@ -1,0 +1,10 @@
+{
+  "Id": "sample",
+  "Version": "1.0",
+  "Name": "Sample",
+  "Description": "A Plugin used to demnostrate the plugin system",
+  "Interface": "pluginxpert",
+  "InterfaceVersion": "2.0",
+  "Assembly": "TestPlugin.dll",
+  "Class": "Class1"
+}

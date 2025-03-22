@@ -3,7 +3,7 @@ using SAPTeam.PluginXpert.Types;
 
 namespace PluginXpert.ConsoleTest
 {
-    class Program
+    class LegacyTest
     {
 #if DEBUG
         static string pluginPath = "..\\..\\..\\..\\..\\samples\\TestPlugin\\bin\\Debug\\net6.0";
@@ -11,7 +11,7 @@ namespace PluginXpert.ConsoleTest
         static string pluginPath = "..\\..\\..\\..\\..\\samples\\TestPlugin\\bin\\Release\\net6.0";
 #endif
 
-        static void Main(string[] args)
+        static void MainLegacy(string[] args)
         {
             try
             {
