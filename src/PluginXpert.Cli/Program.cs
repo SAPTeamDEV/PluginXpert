@@ -74,14 +74,13 @@ namespace PluginXpert.Cli
 
             var generateCmd = new Command("generate", "Generate plugin config file")
             {
-                pckArg,
                 cfgDestArg,
             };
 
-            generateCmd.SetHandler((packagePath, pluginConfigDestinationPath) =>
+            generateCmd.SetHandler((pluginConfigDestinationPath) =>
             {
                 GeneratePluginConfig(pluginConfigDestinationPath);
-            }, pckArg, cfgDestArg);
+            }, cfgDestArg);
             root.AddCommand(generateCmd);
 
             var pfxOpt = new Option<string>("--pfx", "PFX File contains certificate and private key");

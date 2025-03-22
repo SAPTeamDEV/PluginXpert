@@ -16,7 +16,7 @@ namespace SAPTeam.PluginXpert
 
         public PackageInfo PackageInfo { get; private set; } = new();
 
-        public PluginPackage(string containerPath) : base(Path.GetFullPath(containerPath), Path.GetDirectoryName(Path.GetFullPath(containerPath)))
+        public PluginPackage(string containerPath) : base(Path.GetDirectoryName(Path.GetFullPath(containerPath)), Path.GetFileName(containerPath))
         {
             Updating += UpdatePackageInfo;
 
