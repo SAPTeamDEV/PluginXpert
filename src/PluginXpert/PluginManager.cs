@@ -97,7 +97,7 @@ public class PluginManager<TPlugin, TGateway>
 
         if (!package.ReadOnly) throw new ArgumentException("Cannot load a mutable package");
 
-        if (package.VerifyPackageInfo()) throw new InvalidDataException($"Invalid package info");
+        if (!package.VerifyPackageInfo()) throw new InvalidDataException($"Invalid package info");
 
         Version runtimeVersion = GetRuntimeVersion();
         if (runtimeVersion == null) throw new ApplicationException("Cannot determine the runtime version");
