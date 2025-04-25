@@ -23,6 +23,8 @@ public class PluginManager<TPlugin, TGateway>
 
     public List<string> TemporaryDirectories { get; } = new List<string>();
 
+    List<PluginLoadContext> _loadContexts = [];
+
     /// <summary>
     /// Gets the list of all plugins.
     /// </summary>
@@ -132,6 +134,7 @@ public class PluginManager<TPlugin, TGateway>
             if (plg.Count == 1)
             {
                 chosenEntries.Add(plg.First().Value);
+                continue;
             }
 
             var chosenEnt = plg.Values
@@ -164,9 +167,32 @@ public class PluginManager<TPlugin, TGateway>
 
     public void Cleanup()
     {
+        foreach (var plugin in ValidPlugins)
+        {
+            SafeRun(plugin.Instance.Dispose);
+        }
+
+        foreach (var loader in _loadContexts)
+        {
+            SafeRun(loader.Unload);
+        }
+
         foreach (var dir in TemporaryDirectories)
         {
-            Directory.Delete(dir, true);
+            SafeRun(() => Directory.Delete(dir, true));
+        }
+    }
+
+    private static bool SafeRun(Action action)
+    {
+        try
+        {
+            action();
+            return true;
+        }
+        catch
+        {
+            return false;
         }
     }
 
