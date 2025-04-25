@@ -22,7 +22,7 @@ namespace PluginXpert.Msbuild
 
         public override bool Execute()
         {
-            return false;
+            return true;
         }
     }
 }

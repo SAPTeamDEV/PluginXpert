@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-using EasySign;
+using SAPTeam.EasySign;
 
 namespace SAPTeam.PluginXpert
 {
@@ -16,18 +16,18 @@ namespace SAPTeam.PluginXpert
 
         public PackageInfo PackageInfo { get; private set; } = new();
 
-        public PluginPackage(string containerPath) : base(Path.GetDirectoryName(Path.GetFullPath(containerPath)), Path.GetFileName(containerPath))
+        public PluginPackage(string containerPath) : base(containerPath)
         {
             Updating += UpdatePackageInfo;
 
-            Manifest.BundleFiles = true;
+            Manifest.StoreOriginalFiles = true;
         }
 
         private void UpdatePackageInfo(ZipArchive zip)
         {
             var index = Export(PackageInfo);
 
-            Manifest.GetConcurrentDictionary()[PackageInfoFileName] = ComputeSHA512Hash(index);
+            Manifest.GetEntries()[PackageInfoFileName] = ComputeSHA512Hash(index);
 
             WriteEntry(zip, PackageInfoFileName, index);
         }
@@ -37,14 +37,14 @@ namespace SAPTeam.PluginXpert
             return VerifyFile(PackageInfoFileName);
         }
 
-        protected override void ReadBundle(ZipArchive zip)
+        protected override void Parse(ZipArchive zip)
         {
-            base.ReadBundle(zip);
+            base.Parse(zip);
 
             ZipArchiveEntry entry;
             if ((entry = zip.GetEntry(PackageInfoFileName)) != null)
             {
-                PackageInfo = JsonSerializer.Deserialize<PackageInfo>(entry.Open(), options);
+                PackageInfo = JsonSerializer.Deserialize<PackageInfo>(entry.Open(), SerializerOptions);
             }
         }
 

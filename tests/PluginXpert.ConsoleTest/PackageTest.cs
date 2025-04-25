@@ -19,7 +19,7 @@ namespace PluginXpert.ConsoleTest
 
                 PermissionManager.RegisterPermission(new("plugin", "test", "test"));
                 var package = new PluginPackage(pluginPath);
-                package.Load();
+                package.LoadFromFile();
 
                 var pm = new PluginManager<IPlugin<IGateway>, IGateway>(package, throwOnFail: true);
 

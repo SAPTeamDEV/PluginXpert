@@ -5,7 +5,7 @@ using System.Security.Cryptography.X509Certificates;
 using System;
 using SAPTeam.PluginXpert;
 using System.CommandLine;
-using EasySign;
+using SAPTeam.EasySign;
 using Spectre.Console;
 using Color = Spectre.Console.Color;
 using System.Text.Json.Serialization;
@@ -174,7 +174,7 @@ namespace PluginXpert.Cli
 
         static void Create(string id, string name)
         {
-            Package.Manifest.BundleFiles = true;
+            Package.Manifest.StoreOriginalFiles = true;
 
             Package.PackageInfo.Id = id;
             Package.PackageInfo.Name = name;
@@ -204,7 +204,7 @@ namespace PluginXpert.Cli
                 .Spinner(Spinner.Known.Default)
                 .Start("[yellow]Reading Package[/]", ctx =>
                 {
-                    Package.Load(false);
+                    Package.LoadFromFile(false);
 
                     ctx.Status("[yellow]Loading Plugin Config[/]");
 
@@ -280,7 +280,7 @@ namespace PluginXpert.Cli
                 .Spinner(Spinner.Known.Default)
                 .Start("[yellow]Signing[/]", ctx =>
                 {
-                    Package.Load(false);
+                    Package.LoadFromFile(false);
 
                     int divider = 0;
                     foreach (var cert in certificates)
@@ -310,7 +310,7 @@ namespace PluginXpert.Cli
                             continue;
                         }
 
-                        Package.SignBundle(cert, prvKey);
+                        Package.Sign(cert, prvKey);
                         AnsiConsole.MarkupLine($"[green] Signing Completed Successfully[/]");
                     }
 
@@ -373,7 +373,7 @@ namespace PluginXpert.Cli
                 .Spinner(Spinner.Known.Default)
                 .Start("[yellow]Verifying Signature[/]", ctx =>
                 {
-                    Package.Load();
+                    Package.LoadFromFile();
 
                     int verifiedCerts = 0;
                     int divider = 0;

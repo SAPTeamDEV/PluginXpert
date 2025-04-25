@@ -2,7 +2,7 @@
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
-using EasySign;
+using SAPTeam.EasySign;
 
 using SAPTeam.PluginXpert.Types;
 

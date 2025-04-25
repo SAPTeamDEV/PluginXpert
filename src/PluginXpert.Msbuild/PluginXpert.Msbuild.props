@@ -5,6 +5,6 @@
     <PluginPackageName Condition="$(PluginPackageName) == ''"></PluginPackageName>
   </PropertyGroup>
   <PropertyGroup>
-    <CoverletToolsPath Condition=" '$(CoverletToolsPath)' == '' ">$(MSBuildThisFileDirectory)..\tasks\net6.0\</CoverletToolsPath>
+    <CoverletToolsPath Condition=" '$(CoverletToolsPath)' == '' ">$(MSBuildThisFileDirectory)..\tasks\net8.0\</CoverletToolsPath>
   </PropertyGroup>
 </Project>

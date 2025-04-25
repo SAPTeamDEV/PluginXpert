@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net6.0;net8.0;net9.0</TargetFrameworks>
+    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
     <AssemblyName>SAPTeam.PluginXpert</AssemblyName>
     <RootNamespace>$(AssemblyName)</RootNamespace>
     <PackageId>$(AssemblyName)</PackageId>
@@ -26,11 +26,14 @@
     <SignAssembly>True</SignAssembly>
     <AssemblyOriginatorKeyFile>PluginXpert.snk</AssemblyOriginatorKeyFile>
     <ImplicitUsings>enable</ImplicitUsings>
+    <IsAotCompatible>false</IsAotCompatible>
    </PropertyGroup>
     
     <ItemGroup>
+    <PackageReference Include="DouglasDwyer.CasCore" Version="0.1.3" />
     <PackageReference Include="Nerdbank.GitVersioning" Version="3.6.133" PrivateAssets="All" />
     <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.1.1" PrivateAssets="All" />
+    <PackageReference Include="SAPTeam.EasySign" Version="0.11.0" />
     </ItemGroup>
     
     <ItemGroup>
