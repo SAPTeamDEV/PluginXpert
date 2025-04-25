@@ -11,7 +11,7 @@ namespace SAPTeam.PluginXpert;
 /// <summary>
 /// Represents mechanisms to manage plugins permissions.
 /// </summary>
-public class PermissionManager
+public class PermissionManager : IDisposable
 {
     /// <summary>
     /// Gets a dictionary containing declared permissions.
@@ -19,7 +19,8 @@ public class PermissionManager
     protected Dictionary<string, Permission> DeclaredPermissions { get; } = [];
 
     readonly Dictionary<string, SecurityDescriptor> _plugins = [];
-    readonly byte[] _secretKey;
+    byte[] _secretKey;
+    private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PermissionManager"/> class.
@@ -54,13 +55,9 @@ public class PermissionManager
         return securityDescriptor;
     }
 
-    public virtual void RevokeSecurityDescriptor(SecurityDescriptor securityDescriptor)
+    public virtual bool RevokeSecurityDescriptor(string securityIdentifier)
     {
-        if (_plugins.ContainsValue(securityDescriptor))
-        {
-            string securityIdentifier = securityDescriptor.Owner;
-            _plugins.Remove(securityIdentifier);
-        }
+        return _plugins.Remove(securityIdentifier); ;
     }
 
     public virtual bool HasPermission(SecurityDescriptor securityDescriptor, Permission permission)
@@ -76,17 +73,14 @@ public class PermissionManager
 
     public bool ValidateSecurityDescriptor(SecurityDescriptor securityDescriptor)
     {
-        if (securityDescriptor.Owner == null
-            || securityDescriptor.Owner.Length == 0
-            || !_plugins.ContainsKey(securityDescriptor.Owner)
-            || securityDescriptor.Signature == null
-            || securityDescriptor.Signature.Length == 0
-            || !securityDescriptor.Signature.SequenceEqual(SignSecurityDescriptor(securityDescriptor.ToString())))
-        {
-            return false;
-        }
+        var isInvalid = securityDescriptor.Owner == null
+                        || securityDescriptor.Owner.Length == 0
+                        || !_plugins.ContainsKey(securityDescriptor.Owner)
+                        || securityDescriptor.Signature == null
+                        || securityDescriptor.Signature.Length == 0
+                        || !securityDescriptor.Signature.SequenceEqual(SignSecurityDescriptor(securityDescriptor.ToString()));
 
-        return true;
+        return !isInvalid;
     }
 
     private byte[] SignSecurityDescriptor(string securityDescriptorString)
@@ -139,5 +133,27 @@ public class PermissionManager
         }
 
         return permissions.ToArray();
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                _plugins.Clear();
+                DeclaredPermissions.Clear();
+            }
+
+            _secretKey = null!;
+
+            _disposed = true;
+        }
+    }
+
+    public void Dispose()
+    {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

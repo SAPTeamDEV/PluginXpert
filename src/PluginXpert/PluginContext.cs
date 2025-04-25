@@ -81,7 +81,7 @@ public class PluginContext : IDisposable
         Gateway?.Dispose();
         Gateway = null;
 
-        permissionManager.RevokeSecurityDescriptor(SecurityDescriptor);
+        permissionManager.RevokeSecurityDescriptor(SecurityDescriptor.Owner);
         permissionManager = null!;
     }
 }

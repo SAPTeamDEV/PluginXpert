@@ -182,7 +182,6 @@ public class PluginManager : IReadOnlyCollection<PluginImplementation>, IDisposa
     {
         var policy = new CasPolicyBuilder()
             .WithDefaultSandbox()
-            .Allow(typeof(IGateway))
             .Build();
 
         CasAssemblyLoader loadContext = new CasAssemblyLoader(policy, isCollectible: true);
@@ -269,6 +268,7 @@ public class PluginManager : IReadOnlyCollection<PluginImplementation>, IDisposa
                 }
                 _temporaryDirectories.Clear();
 
+                PermissionManager.Dispose();
             }
 
             _disposed = true;
