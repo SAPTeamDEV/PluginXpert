@@ -1,7 +1,10 @@
 ﻿using System.Collections;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Runtime.Loader;
 using System.Text.RegularExpressions;
+
+using DouglasDwyer.CasCore;
 
 using EnsureThat;
 
@@ -20,7 +23,7 @@ public class PluginManager : IReadOnlyCollection<PluginImplementation>, IDisposa
     private readonly bool _throwOnFail;
 
     private List<string> _temporaryDirectories = [];
-    private List<PluginLoadContext> _loadContexts = [];
+    private List<CasAssemblyLoader> _loadContexts = [];
     private Dictionary<string, PluginImplementation> _implementations = [];
 
     /// <summary>
@@ -177,7 +180,12 @@ public class PluginManager : IReadOnlyCollection<PluginImplementation>, IDisposa
 
     private Assembly LoadAssembly(string pluginLocation)
     {
-        PluginLoadContext loadContext = new PluginLoadContext(pluginLocation);
+        var policy = new CasPolicyBuilder()
+            .WithDefaultSandbox()
+            .Allow(typeof(IGateway))
+            .Build();
+
+        CasAssemblyLoader loadContext = new CasAssemblyLoader(policy, isCollectible: true);
         _loadContexts.Add(loadContext);
 
         return loadContext.LoadFromAssemblyName(new AssemblyName(Path.GetFileNameWithoutExtension(pluginLocation)));
