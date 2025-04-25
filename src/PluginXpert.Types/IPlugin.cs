@@ -5,7 +5,7 @@ namespace SAPTeam.PluginXpert.Types
     /// <summary>
     /// Provides standard interface to implement managed plugins.
     /// </summary>
-    public interface IPlugin<T>
+    public interface IPlugin<T> : IDisposable
         where T : IGateway
     {
         /// <summary>
