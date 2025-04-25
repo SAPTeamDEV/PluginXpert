@@ -1,28 +1,21 @@
 ﻿using SAPTeam.PluginXpert.Types;
 
-namespace TestPlugin
+namespace TestPlugin;
+
+public class Class1 : IPlugin
 {
-    public class Class1 : IPlugin<IGateway>
+    public void Dispose()
     {
-        public string Name => "TestPlugin";
-        public string[] Permissions { get; } = new string[]
-        {
-            "plugin:test"
-        };
+        // Dispose of any resources if needed
+    }
 
-        public void Dispose()
-        {
-            // Dispose of any resources if needed
-        }
+    public void OnLoad(IGateway gateway)
+    {
+        
+    }
 
-        public void OnLoad(IGateway gateway)
-        {
-            gateway.PermissionManager.RequestPermission(gateway.PermissionManager.GetPermissions(Permissions[0])[0]);
-        }
-
-        public void Run()
-        {
-            Console.WriteLine("HIII");
-        }
+    public void Run()
+    {
+        Console.WriteLine("HIII");
     }
 }

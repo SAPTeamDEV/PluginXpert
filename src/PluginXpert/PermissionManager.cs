@@ -1,223 +1,143 @@
 ﻿using System.Diagnostics;
 using System.Reflection;
 using System.Security;
+using System.Security.Cryptography;
+using System.Text;
 
 using SAPTeam.PluginXpert.Types;
 
-namespace SAPTeam.PluginXpert
+namespace SAPTeam.PluginXpert;
+
+/// <summary>
+/// Represents mechanisms to manage plugins permissions.
+/// </summary>
+public class PermissionManager
 {
     /// <summary>
-    /// Represents mechanisms to manage plugins permissions.
+    /// Gets a dictionary containing declared permissions.
     /// </summary>
-    public class PermissionManager : IPermissionManager
+    protected Dictionary<string, Permission> DeclaredPermissions { get; } = [];
+
+    readonly Dictionary<string, SecurityDescriptor> _plugins = [];
+    readonly byte[] _secretKey;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PermissionManager"/> class.
+    /// </summary>
+    public PermissionManager()
     {
-        /// <summary>
-        /// Get a dictionary containing declared permissions.
-        /// </summary>
-        static Dictionary<string, Permission> DeclaredPermissions { get; } = new Dictionary<string, Permission>();
+        _secretKey = new byte[64];
+        using var rng = RandomNumberGenerator.Create();
+        rng.GetBytes(_secretKey);
+    }
 
-        readonly Dictionary<string, Dictionary<string, bool>> permissions = new Dictionary<string, Dictionary<string, bool>>();
+    /// <summary>
+    /// Registers the plugin in the permission manager and generates a security descriptor for it.
+    /// </summary>
+    /// <param name="plugin">A managed plugin instance</param>
+    public virtual SecurityDescriptor RegisterPlugin(PluginImplementation impl, IPlugin plugin, PluginEntry entry)
+    {
+        var type = plugin.GetType();
+        string moduleName = type.Module.Name;
+        string pluginFullname = type.FullName ?? throw new ApplicationException("Plugin type does not have a full name");
+        string securityIdentifier = $"{impl}{moduleName}:{pluginFullname}";
 
-        /// <summary>
-        /// An array of assembly names with unlimited privileges.
-        /// </summary>
-        protected string[] GrantedNames { get; } = new string[]
+        Permission[] permissions = GetPermissions(entry.Permissions);
+
+        var securityDescriptor = _plugins[securityIdentifier] = new()
         {
-            Assembly.GetExecutingAssembly().Modules.First().Name.ToLower(), // PluginManager Assembly
-            Assembly.GetEntryAssembly().Modules.First().Name.ToLower(), // Application name
+            Owner = securityIdentifier,
+            Permissions = permissions,
+            Signature = SignSecurityDescriptor(SecurityDescriptor.GetString(securityIdentifier, permissions))
         };
 
-        /// <summary>
-        /// An array of assembly prefixes with unlimited privileges.
-        /// </summary>
-        protected string[] GrantedPrefixes { get; } = new string[]
+        return securityDescriptor;
+    }
+
+    public virtual void RevokeSecurityDescriptor(SecurityDescriptor securityDescriptor)
+    {
+        if (_plugins.ContainsValue(securityDescriptor))
         {
-            "system.",
-            "microsoft.",
-            "xunit."
-        };
+            string securityIdentifier = securityDescriptor.Owner;
+            _plugins.Remove(securityIdentifier);
+        }
+    }
 
-        const string InternalPackageName = "internal";
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="PermissionManager"/> class.
-        /// </summary>
-        /// <param name="grantedNames">
-        /// An array of assembly names with unlimited privileges.
-        /// </param>
-        /// <param name="grantedPrefixes">
-        /// An array of assembly prefixes with unlimited privileges.
-        /// </param>
-        public PermissionManager(string[] grantedNames = null, string[] grantedPrefixes = null)
+    public virtual bool HasPermission(SecurityDescriptor securityDescriptor, Permission permission)
+    {
+        if (!ValidateSecurityDescriptor(securityDescriptor))
         {
-            if (grantedNames != null)
-            {
-                GrantedNames = GrantedNames.Concat(grantedNames).ToArray();
-            }
-
-            if (grantedPrefixes != null)
-            {
-                GrantedPrefixes = GrantedPrefixes.Concat(grantedPrefixes).ToArray();
-            }
+            throw new SecurityException($"The security descriptor {securityDescriptor.Owner} is invalid");
         }
 
-        /// <summary>
-        /// Registers a new plugin in plugin store.
-        /// </summary>
-        /// <param name="plugin">A managed plugin instance</param>
-        /// <param name="pluginPermissions">Permissions declared by the plugin</param>
-        public virtual string RegisterPlugin(object plugin, Permission[] pluginPermissions)
+        Permission resolvedPerm = GetPermissions(permission.ToString()).Single();
+        return securityDescriptor.Permissions.Contains(resolvedPerm);
+    }
+
+    public bool ValidateSecurityDescriptor(SecurityDescriptor securityDescriptor)
+    {
+        if (securityDescriptor.Owner == null
+            || securityDescriptor.Owner.Length == 0
+            || !_plugins.ContainsKey(securityDescriptor.Owner)
+            || securityDescriptor.Signature == null
+            || securityDescriptor.Signature.Length == 0
+            || !securityDescriptor.Signature.SequenceEqual(SignSecurityDescriptor(securityDescriptor.ToString())))
         {
-            var type = plugin.GetType();
-            string moduleName = type.Module.Name;
-            string pluginFullname = type.FullName;
-            string packageName = $"{moduleName}:{pluginFullname}";
-            if (!IsLegalName(moduleName))
-            {
-                throw new SecurityException("Plugin identifier can't start with illegal prefixes.");
-            }
-
-            permissions[packageName] = new();
-
-            foreach (var perm in pluginPermissions)
-            {
-                permissions[packageName][perm] = false;
-            }
-
-            return packageName;
+            return false;
         }
 
-        /// <summary>
-        /// Checks the privileges of the caller for the giving <paramref name="permission"/>.
-        /// </summary>
-        /// <param name="permission">An instance of <see cref="Permission"/> that corresponds to the specific permission.</param>
-        /// <returns></returns>
-        public virtual bool HasPermission(Permission permission)
+        return true;
+    }
+
+    private byte[] SignSecurityDescriptor(string securityDescriptorString)
+    {
+        using var hmac = new HMACSHA256(_secretKey);
+        byte[] data = Encoding.UTF8.GetBytes(securityDescriptorString);
+        return hmac.ComputeHash(data);
+    }
+
+    /// <summary>
+    /// Adds the given <paramref name="permission"/> to the <see cref="DeclaredPermissions"/>.
+    /// </summary>
+    /// <param name="permission">An instance of the <see cref="Permission"/>.</param>
+    /// <returns>True if the permission was registered successfully, otherwise false.</returns>
+    public bool RegisterPermission(Permission permission)
+    {
+        if (!permission.IsValid)
         {
-            string packageName = GetPackageName(permission);
-            return packageName == InternalPackageName || permissions[packageName][permission];
+            throw new ArgumentException("The permission is not valid");
         }
 
-        /// <summary>
-        /// Adds the given <paramref name="permission"/> to the <see cref="DeclaredPermissions"/>.
-        /// </summary>
-        /// <param name="permission">An instance of the <see cref="Permission"/> with all properties.</param>
-        public static void RegisterPermission(Permission permission)
+        if (!DeclaredPermissions.ContainsKey(permission.ToString()))
         {
-            if (!DeclaredPermissions.ContainsKey(permission.ToString()))
-            {
-                DeclaredPermissions[permission.ToString()] = permission;
-            }
-        }
-
-        /// <summary>
-        /// Gets the corresponding permission object.
-        /// </summary>
-        /// <param name="permissionNames">The fully-qualified name of the permission.</param>
-        /// <returns>An instance of <see cref="Permission"/> or a <see cref="SecurityException"/> when the requested permission is not declared.</returns>
-        public static Permission[] GetPermissionsStatic(params string[] permissionNames)
-        {
-            List<Permission> permissions = new List<Permission>();
-
-            foreach (var permissionName in permissionNames)
-            {
-                if (DeclaredPermissions.ContainsKey(permissionName))
-                {
-                    permissions.Add(DeclaredPermissions[permissionName]);
-                }
-                else
-                {
-                    throw new SecurityException($"The permission {permissionName} is not declared.");
-                }
-            }
-
-            return permissions.ToArray();
-        }
-
-        /// <inheritdoc/>
-        public Permission[] GetPermissions(params string[] permissionNames)
-        {
-            return GetPermissionsStatic(permissionNames);
-        }
-
-        /// <inheritdoc/>
-        public virtual bool RequestPermission(Permission permission)
-        {
-            string packageName = GetPackageName(permission);
-#if DEBUG
-            Console.WriteLine($"Permission {permission} requested by {packageName}");
-#endif
+            DeclaredPermissions[permission.ToString()] = permission;
             return true;
         }
 
-        /// <summary>
-        /// Gets the caller package name.
-        /// </summary>
-        /// <param name="permission">The specific permission to check security attributes of it.</param>
-        /// <returns>The package name of the caller plugin. if the caller was not a plugin, it returns <see cref="InternalPackageName"/>.</returns>
-        /// <exception cref="SecurityException"></exception>
-        protected string GetPackageName(Permission permission)
+        return false;
+    }
+
+    /// <summary>
+    /// Gets the corresponding permission object.
+    /// </summary>
+    /// <param name="permissionNames">The fully-qualified name of the permission.</param>
+    /// <returns>An instance of <see cref="Permission"/> or a <see cref="SecurityException"/> when the requested permission is not declared.</returns>
+    public Permission[] GetPermissions(params string[] permissionNames)
+    {
+        List<Permission> permissions = [];
+
+        foreach (var permissionName in permissionNames)
         {
-            StackTrace stack = new();
-            MethodBase client = null;
-
-            foreach (var frame in stack.GetFrames())
+            if (DeclaredPermissions.TryGetValue(permissionName, out Permission value))
             {
-                var frameCaller = frame.GetMethod();
-                var frameName = frameCaller.Module.Name;
-                if (frameName == null)
-                {
-                    continue;
-                }
-
-                if (GrantedNames.Contains(frameName.ToLower()) || !IsLegalName(frameName))
-                {
-                    continue;
-                }
-
-                client = frameCaller;
-                break;
+                permissions.Add(value);
             }
-
-            if (client == null)
+            else
             {
-                // Everything is good, maybe...
-                return InternalPackageName;
+                throw new SecurityException($"The permission {permissionName} is not declared");
             }
-
-            string packageName = $"{client.Module.Name}:{client.DeclaringType.FullName}";
-
-            if (!permissions.ContainsKey(packageName))
-            {
-                throw new SecurityException($"The plugin \"{packageName}\" is not registered.");
-            }
-
-            var permissionStore = permissions[packageName];
-
-            if (!permissionStore.ContainsKey(permission))
-            {
-                throw new SecurityException($"The permission \"{permission}\" is not registered for the plugin: {packageName}");
-            }
-
-            return packageName;
         }
 
-        /// <summary>
-        /// Checks the availability of the plugin name.
-        /// </summary>
-        /// <param name="pluginName">The name of the plugin file name.</param>
-        /// <returns><see langword="true"/> if the plugin name is not starts with the denied prefixes (such as System. or Microsoft.) otherwise returns <see langword="false"/>.</returns>
-        protected bool IsLegalName(string pluginName)
-        {
-            foreach (var name in GrantedPrefixes)
-            {
-                if (pluginName.ToLower().StartsWith(name))
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
+        return permissions.ToArray();
     }
 }

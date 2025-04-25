@@ -6,24 +6,44 @@ using System.Threading.Tasks;
 
 using SAPTeam.PluginXpert.Types;
 
-namespace SAPTeam.PluginXpert
+namespace SAPTeam.PluginXpert;
+
+public class Gateway : IGateway
 {
-    public class Gateway : IGateway
+    PluginManager _pluginManager;
+    private bool _disposed;
+
+    public SecurityDescriptor SecurityDescriptor { get; }
+
+    public Gateway(SecurityDescriptor securityDescriptor, PluginManager pluginManager)
     {
-        public string Id { get; }
+        SecurityDescriptor = securityDescriptor;
+        _pluginManager = pluginManager;
+    }
 
-        public IPermissionManager PermissionManager { get; }
+    public void EraseSettings() => throw new NotImplementedException();
 
-        public Gateway(string id, IPermissionManager permissionManager)
+    public T GetSettings<T>() => throw new NotImplementedException();
+
+    public void SaveSettings<T>(T settings) => throw new NotImplementedException();
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
         {
-            Id = id;
-            PermissionManager = permissionManager;
+            if (disposing)
+            {
+                
+            }
+
+            _pluginManager = null!;
+            _disposed = true;
         }
+    }
 
-        public void EraseSettings() => throw new NotImplementedException();
-
-        public T GetSettings<T>() => throw new NotImplementedException();
-
-        public void SaveSettings<T>(T settings) => throw new NotImplementedException();
+    public void Dispose()
+    {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

@@ -1,19 +1,12 @@
 using SAPTeam.PluginXpert.Types;
 
-namespace SAPTeam.PluginXpert.Tests
-{
-    public class UnitTest1
-    {
-#if DEBUG
-        static string pluginPath = "..\\..\\..\\..\\..\\samples\\TestPlugin\\bin\\Debug\\net6.0";
-#else
-        static string pluginPath = "..\\..\\..\\..\\..\\samples\\TestPlugin\\bin\\Release\\net6.0";
-#endif
+namespace SAPTeam.PluginXpert.Tests;
 
-        [Fact]
-        public void Test1()
-        {
-            var pm = new PluginManager<IPlugin<IGateway>, IGateway>(pluginPath.Replace('\\', Path.DirectorySeparatorChar), "TestPlugin.dll", new PermissionManager(new string[] { GetType().Module.Name.ToLower() }));
-        }
+public class UnitTest1
+{
+    [Fact]
+    public void Test1()
+    {
+
     }
 }

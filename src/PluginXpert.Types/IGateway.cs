@@ -4,12 +4,8 @@ using System.Text;
 
 namespace SAPTeam.PluginXpert.Types
 {
-    public interface IGateway
+    public interface IGateway : IDisposable
     {
-        string Id { get; }
-
-        IPermissionManager PermissionManager { get; }
-
         T GetSettings<T>();
 
         void SaveSettings<T>(T settings);

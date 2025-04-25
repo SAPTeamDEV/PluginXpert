@@ -7,7 +7,7 @@ internal class PluginLoadContext : AssemblyLoadContext
 {
     private AssemblyDependencyResolver _resolver;
 
-    public PluginLoadContext(string pluginPath)
+    public PluginLoadContext(string pluginPath) : base(isCollectible: true)
     {
         _resolver = new AssemblyDependencyResolver(pluginPath);
     }
