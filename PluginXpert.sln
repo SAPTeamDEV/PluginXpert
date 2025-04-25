@@ -21,8 +21,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "examples", "examples", "{8A
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PluginXpert.Cli", "src\PluginXpert.Cli\PluginXpert.Cli.csproj", "{B7100BE0-FEB0-4341-975C-39814246C1AA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PluginXpert.Msbuild", "src\PluginXpert.Msbuild\PluginXpert.Msbuild.csproj", "{B89844A8-83EC-0AA4-0737-6D78431D5340}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -53,10 +51,6 @@ Global
 		{B7100BE0-FEB0-4341-975C-39814246C1AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B7100BE0-FEB0-4341-975C-39814246C1AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B7100BE0-FEB0-4341-975C-39814246C1AA}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B89844A8-83EC-0AA4-0737-6D78431D5340}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B89844A8-83EC-0AA4-0737-6D78431D5340}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B89844A8-83EC-0AA4-0737-6D78431D5340}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B89844A8-83EC-0AA4-0737-6D78431D5340}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -68,7 +62,6 @@ Global
 		{3DFFB12A-7F72-4B7D-B389-F4EBE0819CD6} = {E01E2892-F400-4DC6-850D-309B2BC956DC}
 		{A07AA055-5648-4781-B6F3-992D23FAE914} = {E01E2892-F400-4DC6-850D-309B2BC956DC}
 		{B7100BE0-FEB0-4341-975C-39814246C1AA} = {D323FFEB-9176-4B2E-93A0-E4E04A857DB8}
-		{B89844A8-83EC-0AA4-0737-6D78431D5340} = {D323FFEB-9176-4B2E-93A0-E4E04A857DB8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B5FB070C-D307-45D3-93E7-873EF463506E}
