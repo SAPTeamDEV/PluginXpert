@@ -12,7 +12,7 @@ class Program
         SecurityContext securityContext = new();
         securityContext.RegisterPermission(new("plugin", "test", "Test", "Ability to test"));
 
-        var pm = new PluginManager(securityContext, throwOnFail: true)
+        var pm = new PluginManager(securityContext)
         {
             new DefaultPluginImplementation()
         };

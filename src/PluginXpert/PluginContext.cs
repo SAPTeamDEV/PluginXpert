@@ -4,15 +4,19 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using DouglasDwyer.CasCore;
+
 using EnsureThat;
 
 using SAPTeam.PluginXpert.Types;
 
 namespace SAPTeam.PluginXpert;
 
-public class PluginContext : IDisposable
+public sealed class PluginContext : IDisposable
 {
-    private SecurityContext securityContext;
+    private bool _disposed;
+
+    public bool Disposed => _disposed;
 
     public string Id => PluginEntry.Id;
 
@@ -24,62 +28,46 @@ public class PluginContext : IDisposable
 
     public IPlugin? Instance { get; private set; }
 
-    public bool IsLoaded { get; private set; }
+    public bool Valid { get; private set; }
 
     public Exception? Exception { get; private set; }
 
     public IGateway? Gateway { get; private set; }
 
-    private PluginContext()
+    public CasAssemblyLoader? Loader { get; private set; }
+
+    public PluginContext(PluginLoadSession session)
     {
-        
-    }
-
-    public static PluginContext? Create(SecurityContext securityContext, PluginImplementation impl, IPlugin? instance, PluginEntry entry, bool throwOnFail = true)
-    {
-        if (instance == null)
-        {
-            return null;
-        }
-
-        Ensure.Any.IsNotNull(entry);
-
-        PluginContext? context = new();
-
-        try
-        {
-            context.securityContext = securityContext;
-            context.Instance = instance;
-            context.PluginEntry = entry;
-            context.Token = securityContext.RegisterPlugin(impl, instance, entry);
-            context.Gateway = impl.CreateGateway(instance, context.Token, entry);
-            instance.OnLoad(context.Gateway);
-            context.IsLoaded = true;
-        }
-        catch (Exception e)
-        {
-            if (throwOnFail)
-            {
-                throw;
-            }
-
-            context.IsLoaded = false;
-            context.Exception = e;
-        }
-
-        impl.Add(context);
-        return context;
+        Instance = session.Instance;
+        PluginEntry = session.Entry;
+        Token = session.Token!;
+        Gateway = session.Gateway;
+        Loader = session.Loader;
+        Exception = session.Exception;
+        Valid = session.Result == PluginLoadResult.Success;
     }
 
     public void Dispose()
     {
-        Instance?.Dispose();
-        Instance = null;
+        if (!_disposed)
+        {
+            Valid = false;
 
-        Gateway?.Dispose();
-        Gateway = null;
+            Instance?.Dispose();
+            Instance = null;
 
-        securityContext.RevokeToken(Token);
-        securityContext = null!;
+            Gateway?.Dispose();
+            Gateway = null;
+
+            Token.Revoke();
+            Token = null!;
+
+            Loader?.Unload();
+            Loader = null;
+
+            Exception = null;
+
+            _disposed = true;
+        }
     }
 }

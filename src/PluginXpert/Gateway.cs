@@ -10,15 +10,15 @@ namespace SAPTeam.PluginXpert;
 
 public class Gateway : IGateway
 {
-    PluginManager _pluginManager;
     private bool _disposed;
 
-    public SecurityToken Token { get; }
+    public bool Disposed => _disposed;
 
-    public Gateway(SecurityToken securityToken, PluginManager pluginManager)
+    public SecurityToken Token { get; private set; }
+
+    public Gateway(SecurityToken securityToken)
     {
         Token = securityToken;
-        _pluginManager = pluginManager;
     }
 
     public void EraseSettings() => throw new NotImplementedException();
@@ -36,7 +36,8 @@ public class Gateway : IGateway
                 
             }
 
-            _pluginManager = null!;
+            Token = null!;
+
             _disposed = true;
         }
     }

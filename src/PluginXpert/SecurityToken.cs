@@ -34,13 +34,34 @@ public class SecurityToken : SecurityObject
     {
         get
         {
-            var permissions = string.Join(", ", Permissions.Select(p => p.PermissionId));
-            var properties = new Dictionary<string, string>
+            Dictionary<string, string> properties = [];
+
+            if (Permissions.Length > 0)
             {
-                ["permissions"] = permissions
-            };
+                var permissions = string.Join(", ", Permissions.Select(p => p.PermissionId));
+                properties = new Dictionary<string, string>
+                {
+                    ["permissions"] = permissions
+                };
+            }
 
             return CreateStateString(properties);
+        }
+    }
+
+    public string TokenId
+    {
+        get
+        {
+            var sb = new StringBuilder();
+
+            sb.Append($"{Owner}@{Domain}");
+            if (Digest != null)
+            {
+                sb.Append($"-{Digest}");
+            }
+
+            return sb.ToString();
         }
     }
 
@@ -76,5 +97,30 @@ public class SecurityToken : SecurityObject
         Owner = owner.Trim().ToLowerInvariant();
         Digest = digest?.Trim().ToLowerInvariant();
         Permissions = permissions?.ToImmutableArray() ?? [];
+    }
+
+    public override bool IsValid()
+    {
+        return base.IsValid()
+            && Parent!.ValidateToken(this);
+    }
+
+    public bool Revoke()
+    {
+        if (Disposed)
+        {
+            return false;
+        }
+        if (Parent == null)
+        {
+            return false;
+        }
+
+        return Parent.RevokeToken(this);
+    }
+
+    public override string ToString()
+    {
+        return TokenId;
     }
 }

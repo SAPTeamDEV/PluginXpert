@@ -123,30 +123,24 @@ public class SecurityContext : IDisposable
         return securityObject.Signature?.SequenceEqual(signature) ?? false;
     }
 
-    public CasAssemblyLoader CreateAssemblyLoader(PluginEntry entry)
+    public CasAssemblyLoader CreateAssemblyLoader(PluginLoadSession session)
     {
         var policy = new CasPolicyBuilder()
             .WithDefaultSandbox()
             .Build();
 
-        CasAssemblyLoader loadContext = new CasLoader(entry, policy, isCollectible: true);
+        CasAssemblyLoader loadContext = new CasLoader(session.Entry, policy, isCollectible: true);
 
         return loadContext;
     }
 
-    /// <summary>
-    /// Registers the plugin in the permission manager and generates a security descriptor for it.
-    /// </summary>
-    /// <param name="plugin">A managed plugin instance</param>
-    public virtual SecurityToken RegisterPlugin(PluginImplementation impl, IPlugin plugin, PluginEntry entry)
+    public virtual SecurityToken RegisterPlugin(PluginLoadSession session)
     {
-        
+        Permission[] permissions = GetPermissions(session.Entry.Permissions);
 
-        Permission[] permissions = GetPermissions(entry.Permissions);
-
-        var token = new SecurityToken(impl.Interface,
-                                      entry.Id,
-                                      "test",
+        var token = new SecurityToken(session.Implementation?.Interface ?? throw new ArgumentException("Invalid session"),
+                                      session.Entry.Id,
+                                      ComputePluginDigest(session),
                                       permissions);
 
         AddSecurityObject(token);
@@ -155,21 +149,33 @@ public class SecurityContext : IDisposable
         return token;
     }
 
+    private static string ComputePluginDigest(PluginLoadSession session)
+    {
+        byte[] allBytes = session.Package.Signatures.Entries.Keys.Select(x => session.Package.GetCertificate(x).Thumbprint)
+            .Concat([session.Implementation!.Interface, session.Entry.Id])
+            .SelectMany(Encoding.UTF8.GetBytes)
+            .ToArray();
+
+        byte[] hash = SHA256.HashData(allBytes);
+        return string.Concat(hash.Select(b => b.ToString("x2")));
+    }
+
     public virtual bool RevokeToken(SecurityToken securityToken)
     {
+        if (!securityToken.IsValid())
+        {
+            throw new SecurityException($"The token {securityToken.TokenId} is invalid");
+        }
+
+        _securityObjects.Remove(securityToken.UniqueIdentifier);
         return _tokens.Remove(securityToken.UniqueIdentifier);
     }
 
     public bool ValidateToken(SecurityToken securityToken)
     {
-        var isInvalid = securityToken.Owner == null
-                        || securityToken.Owner.Length == 0
-                        || !_tokens.ContainsKey(securityToken.Owner)
-                        || securityToken.Signature == null
-                        || securityToken.Signature?.Length == 0
-                        || !securityToken.Signature.SequenceEqual(SignSecurityObject(securityToken));
-
-        return !isInvalid;
+        return _securityObjects.ContainsKey(securityToken.UniqueIdentifier)
+               && _tokens.TryGetValue(securityToken.UniqueIdentifier, out SecurityToken? registeredToken)
+               && registeredToken == securityToken;
     }
 
     /// <summary>
@@ -196,9 +202,9 @@ public class SecurityContext : IDisposable
 
     public virtual bool HasPermission(SecurityToken securityToken, Permission permission)
     {
-        if (!ValidateToken(securityToken))
+        if (!securityToken.IsValid())
         {
-            throw new SecurityException($"The security descriptor {securityToken.Owner} is invalid");
+            throw new SecurityException($"The token {securityToken.TokenId} is invalid");
         }
 
         Permission resolvedPerm = GetPermissions(permission.ToString()).Single();
@@ -208,8 +214,9 @@ public class SecurityContext : IDisposable
     internal bool ValidatePermission(Permission permission)
     {
         return ValidatePermissionObject(permission)
+            && _securityObjects.TryGetValue(permission.UniqueIdentifier, out _)
             && _permissions.TryGetValue(permission, out Permission? registeredPermission)
-            && permission == registeredPermission;
+            && registeredPermission == permission;
     }
 
     /// <summary>

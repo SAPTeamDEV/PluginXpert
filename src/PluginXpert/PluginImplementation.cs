@@ -14,15 +14,17 @@ public abstract class PluginImplementation : IReadOnlyCollection<PluginContext>,
     private List<PluginContext> _plugins = [];
     private bool _disposed;
 
+    public bool Disposed => _disposed;
+
     public abstract string Interface { get; }
 
     public abstract Version Version { get; }
 
     public virtual Version MinimumVersion => Version;
 
-    public IReadOnlyList<PluginContext> Plugins => _plugins;
+    public string TempPath { get; protected set; } = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
-    public PluginManager? PluginManager { get; internal set; }
+    public IReadOnlyList<PluginContext> Plugins => _plugins;
 
     public int Count => _plugins.Count;
 
@@ -36,26 +38,16 @@ public abstract class PluginImplementation : IReadOnlyCollection<PluginContext>,
         _plugins.Add(context);
     }
 
-    public virtual PluginContext? LoadPlugin(Type type, PluginEntry entry, bool throwOnFail = true)
+    public virtual bool CheckPluginType(Type type)
     {
-        PluginContext? context = null;
-
-        if (typeof(IPlugin).IsAssignableFrom(type))
-        {
-            IPlugin? result = (IPlugin?)Activator.CreateInstance(type);
-            context = PluginContext.Create(GetPluginManager().SecurityContext, this, result, entry);
-        }
-
-        return context;
+        return true;
     }
 
-    public virtual IGateway CreateGateway(IPlugin? plugin, SecurityToken securityToken, PluginEntry entry)
+    public virtual IGateway CreateGateway(PluginLoadSession session)
     {
-        return new Gateway(securityToken, GetPluginManager());
+        return new Gateway(session.Token);
     }
 
-    private PluginManager GetPluginManager() => PluginManager ?? throw new InvalidOperationException("Plugin implementation is not registered in a plugin manager");
-    
     public override string ToString() => $"{Interface}-{Version}";
 
     protected virtual void Dispose(bool disposing)
@@ -71,9 +63,9 @@ public abstract class PluginImplementation : IReadOnlyCollection<PluginContext>,
 
                 _plugins.Clear();
                 _plugins = null!;
-            }
 
-            PluginManager = null;
+                Directory.Delete(TempPath, true);
+            }
 
             _disposed = true;
         }

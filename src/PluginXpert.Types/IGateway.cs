@@ -6,6 +6,8 @@ namespace SAPTeam.PluginXpert.Types
 {
     public interface IGateway : IDisposable
     {
+        bool Disposed { get; }
+
         T GetSettings<T>();
 
         void SaveSettings<T>(T settings);

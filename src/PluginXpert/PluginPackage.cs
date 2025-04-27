@@ -21,13 +21,22 @@ public class PluginPackage : Bundle
         Updating += UpdatePackageInfo;
 
         Manifest.StoreOriginalFiles = true;
+
+        ProtectedEntryNames.Add(PackageInfoFileName);
+    }
+
+    protected override byte[] GetManifestData()
+    {
+        var index = Export(PackageInfo);
+
+        Manifest.GetEntries()[PackageInfoFileName] = ComputeSHA512Hash(index);
+
+        return base.GetManifestData();
     }
 
     private void UpdatePackageInfo(ZipArchive zip)
     {
         var index = Export(PackageInfo);
-
-        Manifest.GetEntries()[PackageInfoFileName] = ComputeSHA512Hash(index);
 
         WriteEntry(zip, PackageInfoFileName, index);
     }
@@ -41,10 +50,17 @@ public class PluginPackage : Bundle
     {
         base.Parse(zip);
 
-        ZipArchiveEntry entry;
+        PackageInfo = null!;
+
+        ZipArchiveEntry? entry;
         if ((entry = zip.GetEntry(PackageInfoFileName)) != null)
         {
-            PackageInfo = JsonSerializer.Deserialize<PackageInfo>(entry.Open(), SerializerOptions);
+            PackageInfo = JsonSerializer.Deserialize<PackageInfo>(entry.Open(), SerializerOptions)!;
+        }
+
+        if (PackageInfo == null)
+        {
+            throw new InvalidDataException($"Cannot find {PackageInfoFileName} in the package.");
         }
     }
 

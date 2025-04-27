@@ -17,28 +17,32 @@ namespace SAPTeam.PluginXpert;
 /// <summary>
 /// Represents methods for loading managed plugins.
 /// </summary>
-public class PluginManager : IReadOnlyCollection<PluginImplementation>, IDisposable
+public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, IDisposable
 {
-    private bool _disposed;
-    private readonly bool _throwOnFail;
+    public static Version? RuntimeVersion { get; } = GetRuntimeVersion();
 
-    private List<string> _temporaryDirectories = [];
-    private List<CasAssemblyLoader> _loadContexts = [];
+    private bool _disposed;
+    private Type _defaultPluginType = typeof(IPlugin);
+
     private Dictionary<string, PluginImplementation> _implementations = [];
+
+    public bool Disposed => _disposed;
+
+    public List<PluginLoadSession> LoadSessions { get; } = [];
 
     /// <summary>
     /// Gets the list of all plugins.
     /// </summary>
-    public Dictionary<string, PluginContext> Plugins { get; } = [];
+    public IEnumerable<PluginContext> Plugins => _implementations.Values.Where(x => !x.Disposed).SelectMany(x => x.Plugins);
 
     /// <summary>
     /// Gets a list of all properly loaded plugins.
     /// </summary>
-    public PluginContext[] ValidPlugins
+    public IEnumerable<PluginContext> ValidPlugins
     {
         get
         {
-            return Plugins.Values.Where(x => x.IsLoaded).ToArray();
+            return Plugins.Where(x => !x.Disposed && x.Valid);
         }
     }
 
@@ -49,15 +53,14 @@ public class PluginManager : IReadOnlyCollection<PluginImplementation>, IDisposa
     
     public int Count => _implementations.Count;
 
-    /// <summary>
-    /// Creates a new instance of the <see cref="PluginManager"/> class.
-    /// </summary>
-    /// <param name="permissionManager">The permission manager that controls the plugin's permissions.</param>
-    /// <param name="throwOnFail">Determines whether this instance should throw an error when a plugin can't be loaded. For example, plugin crash or empty assemblies.</param>
-    public PluginManager(SecurityContext permissionManager = null, bool throwOnFail = false)
+    public PluginManager(SecurityContext? securityContext = null)
     {
-        _throwOnFail = throwOnFail;
-        SecurityContext = permissionManager ?? new SecurityContext();
+        if (RuntimeVersion == null)
+        {
+            throw new ApplicationException("Cannot determine the runtime version");
+        }
+
+        SecurityContext = securityContext ?? new();
     }
 
     public void Add(PluginImplementation impl)
@@ -71,12 +74,6 @@ public class PluginManager : IReadOnlyCollection<PluginImplementation>, IDisposa
             throw new InvalidOperationException($"Plugin implementation {implId} already registered");
         }
 
-        if (impl.PluginManager != null)
-        {
-            throw new InvalidOperationException($"Plugin implementation {implId} already registered in another manager");
-        }
-
-        impl.PluginManager = this;
         _implementations[implId] = impl;
     }
 
@@ -86,23 +83,42 @@ public class PluginManager : IReadOnlyCollection<PluginImplementation>, IDisposa
 
         if (_implementations.Count == 0)
         {
-            throw new InvalidOperationException("No plugin implementations registered");
+            throw new ApplicationException("No plugin implementations registered");
         }
 
-        if (!package.ReadOnly) throw new ArgumentException("Cannot load a mutable package");
+        if (!package.Loaded) throw new ArgumentException("Package is not loaded");
+
+        if (!package.ReadOnly) throw new ArgumentException("Cannot use a mutable package");
 
         if (!package.VerifyPackageInfo()) throw new InvalidDataException($"Invalid package info");
 
-        Version runtimeVersion = GetRuntimeVersion();
-        if (runtimeVersion == null) throw new ApplicationException("Cannot determine the runtime version");
-
-        Dictionary<string, Dictionary<string, PluginEntry>> loadCondidates = new();
+        Dictionary<string, Dictionary<string, PluginEntry>> loadCondidates = [];
 
         foreach (var ent in package.PackageInfo.Plugins)
         {
-            if (ResolveImplementation(ent) == null) continue;
+            var session = new PluginLoadSession(this, package, ent);
+            LoadSessions.Add(session);
 
-            if (ent.TargetFrameworkVersion > runtimeVersion) continue;
+            PluginImplementation? impl;
+            if ((impl = ResolveImplementation(ent)) == null)
+            {
+                session.Result = PluginLoadResult.NotSupportedImplementation;
+                continue;
+            }
+
+            session.Implementation = impl;
+
+            if (session.Implementation.Where(x => x.Id == ent.Id).Any())
+            {
+                session.Result = PluginLoadResult.AlreadyLoaded;
+                continue;
+            }
+
+            if (ent.TargetFrameworkVersion > RuntimeVersion)
+            {
+                session.Result = PluginLoadResult.NotSupportedRuntime;
+                continue;
+            }
 
             if (!loadCondidates.TryGetValue(ent.Id, out Dictionary<string, PluginEntry>? value))
             {
@@ -128,7 +144,7 @@ public class PluginManager : IReadOnlyCollection<PluginImplementation>, IDisposa
             }
 
             var chosenEnt = plg.Values
-                .Where(v => v.TargetFrameworkVersion <= runtimeVersion) // Only consider versions lower or equal to the runtime version
+                .Where(v => v.TargetFrameworkVersion <= RuntimeVersion) // Only consider versions lower or equal to the runtime version
                 .OrderByDescending(v => v.TargetFrameworkVersion) // Get the largest version among them
                 .FirstOrDefault();
 
@@ -137,22 +153,29 @@ public class PluginManager : IReadOnlyCollection<PluginImplementation>, IDisposa
 
         if (chosenEntries.Count == 0) throw new ArgumentException("Can't find any suitable plugins in this package");
 
-        var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-        _temporaryDirectories.Add(tempPath);
-
-        List<PluginContext> plugins = new();
+        List<PluginContext> plugins = [];
         foreach (var entry in chosenEntries)
         {
-            Directory.CreateDirectory(tempPath);
+            var session = LoadSessions.Where(x => x.Entry == entry).Single();
 
-            package.ExtractPlugin(entry, tempPath);
+            _ = session.TryRun(() =>
+            {
+                var tempPath = session.Implementation!.TempPath;
+                Directory.CreateDirectory(tempPath);
 
-            var entryPointPath = Path.Combine(tempPath, $"{entry.Id}-{entry.BuildRef}", entry.Assembly);
+                package.ExtractPlugin(entry, tempPath);
 
-            var loader = SecurityContext.CreateAssemblyLoader(entry);
-            var assembly = LoadAssembly(loader, entryPointPath);
+                session.AssemblyPath = Path.Combine(tempPath, $"{entry.Id}-{entry.BuildRef}", entry.Assembly);
+                session.Token = SecurityContext.RegisterPlugin(session);
+                session.Loader = SecurityContext.CreateAssemblyLoader(session);
+                session.Assembly = session.Loader.LoadFromAssemblyPath(session.AssemblyPath);
 
-            plugins.AddRange(InitializePlugins(assembly, entry.Class, entry));
+                InitializePlugin(session);
+
+                var context = new PluginContext(session);
+                session.Implementation.Add(context);
+                plugins.Add(context);
+            });
         }
 
         return plugins.ToArray();
@@ -166,64 +189,52 @@ public class PluginManager : IReadOnlyCollection<PluginImplementation>, IDisposa
                         .FirstOrDefault();
     }
 
-    protected bool SafeRun(Action action)
+    void InitializePlugin(PluginLoadSession session)
     {
-        try
+        if (session.Implementation == null)
         {
-            action();
-            return true;
+            throw new ArgumentException("Invalid session");
         }
-        catch
-        {
-            if (_throwOnFail) throw;
 
-            return false;
+        Assembly assembly = session.Assembly ?? throw new ArgumentException("Invalid session");
+        var assemblyTypes = assembly.GetTypes();
+        if (assemblyTypes.Length == 0)
+        {
+            throw new PluginLoadException("No types found in assembly");
         }
+
+        var compatibleTypes = assemblyTypes.Where(x => x.IsClass && !x.IsAbstract && _defaultPluginType.IsAssignableFrom(x)).ToArray();
+        if (compatibleTypes.Length == 0)
+        {
+            throw new PluginLoadException("No compatible types found in assembly");
+        }
+
+        var targetType = compatibleTypes.SingleOrDefault(x => x.Name == session.Entry.Class);
+        if (targetType == null)
+        {
+            throw new PluginLoadException("Cannot find target type");
+        }
+
+        var implCheck = session.Implementation.CheckPluginType(targetType);
+        if (!implCheck)
+        {
+            throw new PluginLoadException("Plugin type is not compatible with the implementation");
+        }
+
+        IPlugin? instance = (IPlugin?)Activator.CreateInstance(targetType);
+        if (instance == null)
+        {
+            throw new PluginLoadException("Cannot create plugin instance");
+        }
+
+        session.Instance = instance;
+        session.Gateway = session.Implementation.CreateGateway(session);
+        session.Instance.OnLoad(session.Gateway);
+
+        session.Result = PluginLoadResult.Success;
     }
 
-    private Assembly LoadAssembly(CasAssemblyLoader loadContext, string pluginLocation)
-    {
-        _loadContexts.Add(loadContext);
-
-        return loadContext.LoadFromAssemblyPath(pluginLocation);
-    }
-
-    IEnumerable<PluginContext> InitializePlugins(Assembly assembly, string searchPattern, PluginEntry entry)
-    {
-        PluginImplementation? impl = ResolveImplementation(entry);
-        if (impl == null)
-        {
-            if (_throwOnFail) throw new NotSupportedException($"The plugin implementation {entry.Interface} v{entry.InterfaceVersion} is not supported");
-
-            yield break;
-        }
-
-        int count = 0;
-
-        foreach (Type type in assembly.GetTypes())
-        {
-            if (!Regex.IsMatch(type.Name, searchPattern)) continue;
-
-            PluginContext? context;
-            if ((context = impl.LoadPlugin(type, entry, _throwOnFail)) != null)
-            {
-                Plugins[context.Token.UniqueIdentifier] = context;
-
-                count++;
-                yield return context;
-            }
-        }
-
-        if (_throwOnFail && count == 0)
-        {
-            string availableTypes = string.Join(",", assembly.GetTypes().Select(t => t.FullName));
-            throw new ApplicationException(
-                $"Can't find any type which implements {impl.Interface} v{impl.Version} in {assembly} from {assembly.Location}.\n" +
-                $"Available types: {availableTypes}");
-        }
-    }
-
-    public static Version GetRuntimeVersion()
+    static Version? GetRuntimeVersion()
     {
         string frameworkDescription = RuntimeInformation.FrameworkDescription;
 
@@ -242,40 +253,21 @@ public class PluginManager : IReadOnlyCollection<PluginImplementation>, IDisposa
 
     IEnumerator IEnumerable.GetEnumerator() => _implementations.Values.GetEnumerator();
 
-    protected virtual void Dispose(bool disposing)
+    public void Dispose()
     {
         if (!_disposed)
         {
-            if (disposing)
+            LoadSessions.Clear();
+
+            foreach (var impl in _implementations.Values)
             {
-                foreach (var impl in _implementations.Values)
-                {
-                    impl.Dispose();
-                }
-                _implementations.Clear();
-
-                foreach (var loader in _loadContexts)
-                {
-                    loader.Unload();
-                }
-                _loadContexts.Clear();
-
-                foreach (var dir in _temporaryDirectories)
-                {
-                    Directory.Delete(dir, true);
-                }
-                _temporaryDirectories.Clear();
-
-                SecurityContext.Dispose();
+                impl.Dispose();
             }
+            _implementations.Clear();
+
+            SecurityContext.Dispose();
 
             _disposed = true;
         }
-    }
-
-    public void Dispose()
-    {
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
     }
 }
