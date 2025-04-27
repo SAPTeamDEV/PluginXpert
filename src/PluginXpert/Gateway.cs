@@ -13,11 +13,11 @@ public class Gateway : IGateway
     PluginManager _pluginManager;
     private bool _disposed;
 
-    public SecurityDescriptor SecurityDescriptor { get; }
+    public SecurityToken Token { get; }
 
-    public Gateway(SecurityDescriptor securityDescriptor, PluginManager pluginManager)
+    public Gateway(SecurityToken securityToken, PluginManager pluginManager)
     {
-        SecurityDescriptor = securityDescriptor;
+        Token = securityToken;
         _pluginManager = pluginManager;
     }
 

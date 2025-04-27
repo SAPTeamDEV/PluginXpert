@@ -45,7 +45,7 @@ public class PluginManager : IReadOnlyCollection<PluginImplementation>, IDisposa
     /// <summary>
     /// Gets the permission manager associated with this instance.
     /// </summary>
-    public PermissionManager PermissionManager { get; }
+    public SecurityContext PermissionManager { get; }
     
     public int Count => _implementations.Count;
 
@@ -54,10 +54,10 @@ public class PluginManager : IReadOnlyCollection<PluginImplementation>, IDisposa
     /// </summary>
     /// <param name="permissionManager">The permission manager that controls the plugin's permissions.</param>
     /// <param name="throwOnFail">Determines whether this instance should throw an error when a plugin can't be loaded. For example, plugin crash or empty assemblies.</param>
-    public PluginManager(PermissionManager permissionManager = null, bool throwOnFail = false)
+    public PluginManager(SecurityContext permissionManager = null, bool throwOnFail = false)
     {
         _throwOnFail = throwOnFail;
-        PermissionManager = permissionManager ?? new PermissionManager();
+        PermissionManager = permissionManager ?? new SecurityContext();
     }
 
     public void Add(PluginImplementation impl)
@@ -209,7 +209,7 @@ public class PluginManager : IReadOnlyCollection<PluginImplementation>, IDisposa
             PluginContext? context;
             if ((context = impl.LoadPlugin(type, entry, _throwOnFail)) != null)
             {
-                Plugins[context.SecurityDescriptor.Owner] = context;
+                Plugins[context.Token.UniqueIdentifier] = context;
 
                 count++;
                 yield return context;

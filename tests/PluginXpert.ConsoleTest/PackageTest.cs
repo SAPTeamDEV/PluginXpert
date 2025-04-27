@@ -15,13 +15,13 @@ class Program
             Console.ReadLine();
         }
 
-        PermissionManager permissionManager = new();
-        permissionManager.RegisterPermission(new("plugin", "test", "test"));
+        SecurityContext securityContext = new();
+        securityContext.RegisterPermission(new("plugin", "test", "Test", "Ability to test"));
 
         var package = new PluginPackage(pluginPath);
         package.LoadFromFile();
 
-        var pm = new PluginManager(permissionManager, throwOnFail: true)
+        var pm = new PluginManager(securityContext, throwOnFail: true)
         {
             new DefaultPluginImplementation()
         };

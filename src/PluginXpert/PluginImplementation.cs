@@ -49,9 +49,9 @@ public abstract class PluginImplementation : IReadOnlyCollection<PluginContext>,
         return context;
     }
 
-    public virtual IGateway CreateGateway(IPlugin? plugin, SecurityDescriptor securityDescriptor, PluginEntry entry)
+    public virtual IGateway CreateGateway(IPlugin? plugin, SecurityToken securityToken, PluginEntry entry)
     {
-        return new Gateway(securityDescriptor, GetPluginManager());
+        return new Gateway(securityToken, GetPluginManager());
     }
 
     private PluginManager GetPluginManager() => PluginManager ?? throw new InvalidOperationException("Plugin implementation is not registered in a plugin manager");

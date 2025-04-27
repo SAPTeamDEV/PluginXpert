@@ -12,15 +12,13 @@ namespace SAPTeam.PluginXpert;
 
 public class PluginContext : IDisposable
 {
-    private PermissionManager permissionManager;
+    private SecurityContext securityContext;
 
     public string Id => PluginEntry.Id;
 
-    public string SecurityIdentifier => SecurityDescriptor.Owner;
-
     public Version Version => PluginEntry.Version;
 
-    public SecurityDescriptor SecurityDescriptor { get; private set; }
+    public SecurityToken Token { get; private set; }
 
     public PluginEntry PluginEntry { get; private set; }
 
@@ -37,7 +35,7 @@ public class PluginContext : IDisposable
         
     }
 
-    public static PluginContext? Create(PermissionManager permissionManager, PluginImplementation impl, IPlugin? instance, PluginEntry entry, bool throwOnFail = true)
+    public static PluginContext? Create(SecurityContext securityContext, PluginImplementation impl, IPlugin? instance, PluginEntry entry, bool throwOnFail = true)
     {
         if (instance == null)
         {
@@ -50,11 +48,11 @@ public class PluginContext : IDisposable
 
         try
         {
-            context.permissionManager = permissionManager;
+            context.securityContext = securityContext;
             context.Instance = instance;
             context.PluginEntry = entry;
-            context.SecurityDescriptor = permissionManager.RegisterPlugin(impl, instance, entry);
-            context.Gateway = impl.CreateGateway(instance, context.SecurityDescriptor, entry);
+            context.Token = securityContext.RegisterPlugin(impl, instance, entry);
+            context.Gateway = impl.CreateGateway(instance, context.Token, entry);
             instance.OnLoad(context.Gateway);
             context.IsLoaded = true;
         }
@@ -81,7 +79,7 @@ public class PluginContext : IDisposable
         Gateway?.Dispose();
         Gateway = null;
 
-        permissionManager.RevokeSecurityDescriptor(SecurityDescriptor.Owner);
-        permissionManager = null!;
+        securityContext.RevokeToken(Token);
+        securityContext = null!;
     }
 }
