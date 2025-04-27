@@ -45,7 +45,7 @@ public class PluginManager : IReadOnlyCollection<PluginImplementation>, IDisposa
     /// <summary>
     /// Gets the permission manager associated with this instance.
     /// </summary>
-    public SecurityContext PermissionManager { get; }
+    public SecurityContext SecurityContext { get; }
     
     public int Count => _implementations.Count;
 
@@ -57,7 +57,7 @@ public class PluginManager : IReadOnlyCollection<PluginImplementation>, IDisposa
     public PluginManager(SecurityContext permissionManager = null, bool throwOnFail = false)
     {
         _throwOnFail = throwOnFail;
-        PermissionManager = permissionManager ?? new SecurityContext();
+        SecurityContext = permissionManager ?? new SecurityContext();
     }
 
     public void Add(PluginImplementation impl)
@@ -147,7 +147,10 @@ public class PluginManager : IReadOnlyCollection<PluginImplementation>, IDisposa
 
             package.ExtractPlugin(entry, tempPath);
 
-            var assembly = LoadAssembly(Path.Combine(tempPath, $"{entry.Id}-{entry.BuildRef}", entry.Assembly));
+            var entryPointPath = Path.Combine(tempPath, $"{entry.Id}-{entry.BuildRef}", entry.Assembly);
+
+            var loader = SecurityContext.CreateAssemblyLoader(entry);
+            var assembly = LoadAssembly(loader, entryPointPath);
 
             plugins.AddRange(InitializePlugins(assembly, entry.Class, entry));
         }
@@ -178,16 +181,11 @@ public class PluginManager : IReadOnlyCollection<PluginImplementation>, IDisposa
         }
     }
 
-    private Assembly LoadAssembly(string pluginLocation)
+    private Assembly LoadAssembly(CasAssemblyLoader loadContext, string pluginLocation)
     {
-        var policy = new CasPolicyBuilder()
-            .WithDefaultSandbox()
-            .Build();
-
-        CasAssemblyLoader loadContext = new CasAssemblyLoader(policy, isCollectible: true);
         _loadContexts.Add(loadContext);
 
-        return loadContext.LoadFromAssemblyName(new AssemblyName(Path.GetFileNameWithoutExtension(pluginLocation)));
+        return loadContext.LoadFromAssemblyPath(pluginLocation);
     }
 
     IEnumerable<PluginContext> InitializePlugins(Assembly assembly, string searchPattern, PluginEntry entry)
@@ -268,7 +266,7 @@ public class PluginManager : IReadOnlyCollection<PluginImplementation>, IDisposa
                 }
                 _temporaryDirectories.Clear();
 
-                PermissionManager.Dispose();
+                SecurityContext.Dispose();
             }
 
             _disposed = true;

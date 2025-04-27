@@ -6,6 +6,10 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Xml.Linq;
 
+using DouglasDwyer.CasCore;
+
+using Mono.Cecil;
+
 using SAPTeam.PluginXpert.Types;
 
 namespace SAPTeam.PluginXpert;
@@ -117,6 +121,17 @@ public class SecurityContext : IDisposable
 
         var signature = SignSecurityObject(securityObject);
         return securityObject.Signature?.SequenceEqual(signature) ?? false;
+    }
+
+    public CasAssemblyLoader CreateAssemblyLoader(PluginEntry entry)
+    {
+        var policy = new CasPolicyBuilder()
+            .WithDefaultSandbox()
+            .Build();
+
+        CasAssemblyLoader loadContext = new CasLoader(entry, policy, isCollectible: true);
+
+        return loadContext;
     }
 
     /// <summary>

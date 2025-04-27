@@ -29,4 +29,6 @@ public class PluginEntry
     public string Class { get; set; }
 
     public string[] Permissions { get; set; } = [];
+
+    public bool KeepNamespace { get; set; }
 }

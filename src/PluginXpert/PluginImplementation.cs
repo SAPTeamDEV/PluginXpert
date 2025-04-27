@@ -43,7 +43,7 @@ public abstract class PluginImplementation : IReadOnlyCollection<PluginContext>,
         if (typeof(IPlugin).IsAssignableFrom(type))
         {
             IPlugin? result = (IPlugin?)Activator.CreateInstance(type);
-            context = PluginContext.Create(GetPluginManager().PermissionManager, this, result, entry);
+            context = PluginContext.Create(GetPluginManager().SecurityContext, this, result, entry);
         }
 
         return context;

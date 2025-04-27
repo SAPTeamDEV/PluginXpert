@@ -16,7 +16,7 @@ public class Class1 : IPlugin
 
     public void Run()
     {
-        Console.WriteLine("HIII");
+        Console.WriteLine("Hello World");
         throw new ApplicationException("Test exception");
     }
 }
