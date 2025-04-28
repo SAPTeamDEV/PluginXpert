@@ -14,11 +14,11 @@ public class Gateway : IGateway
 
     public bool Disposed => _disposed;
 
-    public SecurityToken Token { get; private set; }
+    public Token Token { get; private set; }
 
-    public Gateway(SecurityToken securityToken)
+    public Gateway(Token token)
     {
-        Token = securityToken;
+        Token = token;
     }
 
     public void EraseSettings() => throw new NotImplementedException();

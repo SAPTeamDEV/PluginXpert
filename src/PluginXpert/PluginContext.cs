@@ -22,7 +22,7 @@ public sealed class PluginContext : IDisposable
 
     public Version Version => PluginEntry.Version;
 
-    public SecurityToken Token { get; private set; }
+    public Token Token { get; private set; }
 
     public PluginEntry PluginEntry { get; private set; }
 

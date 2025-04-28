@@ -1,5 +1,7 @@
-﻿using System.Collections.Immutable;
+﻿using System.Collections;
+using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Security;
 using System.Security.Cryptography;
@@ -8,21 +10,27 @@ using System.Xml.Linq;
 
 using DouglasDwyer.CasCore;
 
+using EnsureThat;
+
 using Mono.Cecil;
 
 using SAPTeam.PluginXpert.Types;
 
 namespace SAPTeam.PluginXpert;
 
-public class SecurityContext : IDisposable
+/// <summary>
+/// Represents a security infrastructure for plugins.
+/// </summary>
+public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
 {
     readonly Dictionary<string, SecurityObject> _securityObjects = [];
-    readonly Dictionary<string, Permission> _permissions = [];
-    readonly Dictionary<string, SecurityToken> _tokens = [];
     
     byte[] _secretKey;
     bool _disposed;
 
+    /// <summary>
+    /// Gets a value indicating whether this <see cref="SecurityContext"/> has been disposed.
+    /// </summary>
     public bool Disposed => _disposed;
 
     /// <summary>
@@ -35,27 +43,43 @@ public class SecurityContext : IDisposable
         rng.GetBytes(_secretKey);
     }
 
+    /// <summary>
+    /// Signs and adds a <see cref="SecurityObject"/> to the security context.
+    /// </summary>
+    /// <param name="securityObject">
+    /// The <see cref="SecurityObject"/> to add.
+    /// </param>
+    /// <exception cref="ArgumentException">
+    /// The <see cref="SecurityObject"/> is disposed, already registered in a security context or is already signed.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// A <see cref="SecurityObject"/> with the same unique identifier is already registered.
+    /// </exception>
     protected void AddSecurityObject(SecurityObject securityObject)
     {
-        if (securityObject == null)
-        {
-            throw new ArgumentNullException(nameof(securityObject));
-        }
+        CheckDisposed();
 
-        if (securityObject.Parent != null)
-        {
-            throw new InvalidOperationException("The security object is already registered in a permission manager");
-        }
-
-        if (securityObject.Signature != null)
-        {
-            throw new InvalidOperationException("The security object is already signed");
-        }
+        Ensure.Any.IsNotNull(securityObject, nameof(securityObject));
 
         var uid = securityObject.UniqueIdentifier;
         if (string.IsNullOrEmpty(uid))
         {
             throw new ArgumentException("The security object does not have a unique identifier");
+        }
+
+        if (securityObject.Disposed)
+        {
+            throw new ArgumentException("The security object has been disposed");
+        }
+
+        if (securityObject.Parent != null)
+        {
+            throw new ArgumentException("The security object is already registered in a security context");
+        }
+
+        if (securityObject.Signature != null && securityObject.Signature?.Length > 0)
+        {
+            throw new ArgumentException("The security object is already signed");
         }
 
         if (_securityObjects.ContainsKey(uid))
@@ -79,39 +103,170 @@ public class SecurityContext : IDisposable
         return hmac.ComputeHash(data);
     }
 
+    /// <summary>
+    /// Gets the <see cref="SecurityObject"/> with the specified unique identifier.
+    /// </summary>
+    /// <param name="uniqueIdentifier">
+    /// The unique identifier of the <see cref="SecurityObject"/> to get.
+    /// </param>
+    /// <returns>
+    /// The <see cref="SecurityObject"/> with the specified unique identifier.
+    /// </returns>
+    /// <exception cref="KeyNotFoundException">
+    /// The <see cref="SecurityObject"/> with the specified unique identifier was not found.
+    /// </exception>
     public SecurityObject GetSecurityObject(string uniqueIdentifier)
     {
-        if (string.IsNullOrEmpty(uniqueIdentifier))
-        {
-            throw new ArgumentNullException(nameof(uniqueIdentifier));
-        }
+        CheckDisposed();
+
+        Ensure.String.IsNotNullOrEmpty(uniqueIdentifier, nameof(uniqueIdentifier));
 
         return _securityObjects.TryGetValue(uniqueIdentifier, out SecurityObject? securityObject)
             ? securityObject
             : throw new KeyNotFoundException($"The security object with the unique identifier {uniqueIdentifier} was not found");
     }
 
+    /// <summary>
+    /// Gets the <see cref="SecurityObject"/> with the specified unique identifier and casts it to the specified type.
+    /// </summary>
+    /// <typeparam name="T">
+    /// The type of the <see cref="SecurityObject"/> to get.
+    /// </typeparam>
+    /// <param name="uniqueIdentifier">
+    /// The unique identifier of the <typeparamref name="T"/> to get.
+    /// </param>
+    /// <returns>
+    /// The <typeparamref name="T"/> with the specified unique identifier.
+    /// </returns>
+    /// <exception cref="KeyNotFoundException">
+    /// The <see cref="SecurityObject"/> with the specified unique identifier was not found.
+    /// </exception>
+    /// <exception cref="InvalidCastException">
+    /// The <see cref="SecurityObject"/> with the specified unique identifier is not of type <typeparamref name="T"/>.
+    /// </exception>
+    public T GetSecurityObject<T>(string uniqueIdentifier)
+        where T : SecurityObject
+    {
+        var securityObject = GetSecurityObject(uniqueIdentifier);
+
+        return securityObject is T typedSecurityObject
+            ? typedSecurityObject
+            : throw new InvalidCastException($"The security object with the unique identifier {uniqueIdentifier} is not of type {typeof(T).Name}");
+    }
+
+    /// <summary>
+    /// Tries to get the <see cref="SecurityObject"/> with the specified unique identifier.
+    /// </summary>
+    /// <param name="uniqueIdentifier">
+    /// The unique identifier of the <see cref="SecurityObject"/> to get.
+    /// </param>
+    /// <param name="securityObject">
+    /// The <see cref="SecurityObject"/> with the specified unique identifier.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> if the <see cref="SecurityObject"/> was found; otherwise, <see langword="false"/>.
+    /// </returns>
+    public bool TryGetSecurityObject(string uniqueIdentifier, [MaybeNullWhen(false)] out SecurityObject securityObject)
+    {
+        try
+        {
+            securityObject = GetSecurityObject(uniqueIdentifier);
+            return true;
+        }
+        catch (KeyNotFoundException)
+        {
+            securityObject = null;
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Tries to get the <see cref="SecurityObject"/> with the specified unique identifier and casts it to the specified type.
+    /// </summary>
+    /// <typeparam name="T">
+    /// The type of the <see cref="SecurityObject"/> to get.
+    /// </typeparam>
+    /// <param name="uniqueIdentifier">
+    /// The unique identifier of the <typeparamref name="T"/> to get.
+    /// </param>
+    /// <param name="securityObject">
+    /// The <typeparamref name="T"/> with the specified unique identifier.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> if the <typeparamref name="T"/> was found; otherwise, <see langword="false"/>.
+    /// </returns>
+    public bool TryGetSecurityObject<T>(string uniqueIdentifier, [MaybeNullWhen(false)] out T securityObject)
+        where T : SecurityObject
+    {
+        try
+        {
+            securityObject = GetSecurityObject<T>(uniqueIdentifier);
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            throw;
+        }
+        catch (ObjectDisposedException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            securityObject = null;
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Gets all registered security objects.
+    /// </summary>
+    /// <returns>
+    /// An enumerable collection of all registered <see cref="SecurityObject"/> instances.
+    /// </returns>
     public IEnumerable<SecurityObject> GetSecurityObjects()
     {
+        CheckDisposed();
+
         return _securityObjects.Values;
     }
 
+    /// <summary>
+    /// Gets all registered security objects of the specified type.
+    /// </summary>
+    /// <typeparam name="T">
+    /// The type of the <see cref="SecurityObject"/> to get.
+    /// </typeparam>
+    /// <returns>
+    /// An enumerable collection of all registered <typeparamref name="T"/> instances.
+    /// </returns>
     public IEnumerable<T> GetSecurityObjects<T>()
         where T : SecurityObject
     {
-        return _securityObjects.Values.OfType<T>();
+        return GetSecurityObjects().OfType<T>();
     }
 
-    public bool ValidateSecurityObject(SecurityObject securityObject)
+    /// <summary>
+    /// Verifies the signature of the specified <see cref="SecurityObject"/> against its current state.
+    /// </summary>
+    /// <param name="securityObject">
+    /// The <see cref="SecurityObject"/> to verify.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> if the signature is valid; otherwise, <see langword="false"/>.
+    /// </returns>
+    /// <exception cref="SecurityException">
+    /// The <see cref="SecurityObject"/> is not registered in this security context.
+    /// </exception>
+    public bool VerifySecurityObject(SecurityObject securityObject)
     {
-        if (securityObject == null)
-        {
-            throw new ArgumentNullException(nameof(securityObject));
-        }
+        CheckDisposed();
+
+        Ensure.Any.IsNotNull(securityObject, nameof(securityObject));
 
         if (securityObject.Parent != this || !_securityObjects.ContainsKey(securityObject.UniqueIdentifier))
         {
-            throw new SecurityException("The security object is not registered in this permission manager");
+            throw new SecurityException($"The security object {securityObject.UniqueIdentifier} is not registered in this security context");
         }
 
         if (securityObject.Signature == null || securityObject.Signature?.Length == 0)
@@ -123,8 +278,40 @@ public class SecurityContext : IDisposable
         return securityObject.Signature?.SequenceEqual(signature) ?? false;
     }
 
+    /// <summary>
+    /// Removes the specified <see cref="SecurityObject"/> from the security context.
+    /// </summary>
+    /// <param name="securityObject">
+    /// The <see cref="SecurityObject"/> to remove.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> if the <see cref="SecurityObject"/> was removed successfully; otherwise, <see langword="false"/>.
+    /// </returns>
+    internal protected bool RemoveSecurityObject(SecurityObject securityObject)
+    {
+        CheckDisposed();
+
+        securityObject.Parent = null;
+        securityObject.Signature = null;
+
+        return _securityObjects.Remove(securityObject.UniqueIdentifier);
+    }
+
+    /// <summary>
+    /// Creates a new assembly loader for the specified plugin.
+    /// </summary>
+    /// <param name="session">
+    /// The plugin load session with a valid <see cref="PluginLoadSession.Token"/>.
+    /// </param>
+    /// <returns>
+    /// A highly secure assembly loader for the specified plugin limited to the assembly permissions granted to the token.
+    /// </returns>
     public CasAssemblyLoader CreateAssemblyLoader(PluginLoadSession session)
     {
+        CheckDisposed();
+
+        Ensure.Any.IsNotNull(session, nameof(session));
+
         var policy = new CasPolicyBuilder()
             .WithDefaultSandbox()
             .Build();
@@ -134,17 +321,35 @@ public class SecurityContext : IDisposable
         return loadContext;
     }
 
-    public virtual SecurityToken RegisterPlugin(PluginLoadSession session)
+    /// <summary>
+    /// Creates a security token for the specified plugin.
+    /// </summary>
+    /// <param name="session">
+    /// The plugin load session with a valid <see cref="PluginLoadSession.Implementation"/>.
+    /// </param>
+    /// <returns>
+    /// A security token containing the plugin identity and requested permissions.
+    /// </returns>
+    /// <exception cref="ArgumentException">
+    /// The <see cref="PluginLoadSession"/> does not contain a valid implementation.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// A <see cref="SecurityObject"/> with the same unique identifier is already registered.
+    /// </exception>
+    public virtual Token RegisterPlugin(PluginLoadSession session)
     {
-        Permission[] permissions = GetPermissions(session.Entry.Permissions);
+        CheckDisposed();
 
-        var token = new SecurityToken(session.Implementation?.Interface ?? throw new ArgumentException("Invalid session"),
+        Ensure.Any.IsNotNull(session, nameof(session));
+
+        var permissions = ResolvePermissions(session.Entry.Permissions);
+
+        var token = new Token(session.Implementation?.Interface ?? throw new ArgumentException("Invalid session"),
                                       session.Entry.Id,
                                       ComputePluginDigest(session),
                                       permissions);
 
         AddSecurityObject(token);
-        _tokens[token.UniqueIdentifier] = token;
 
         return token;
     }
@@ -160,103 +365,157 @@ public class SecurityContext : IDisposable
         return string.Concat(hash.Select(b => b.ToString("x2")));
     }
 
-    public virtual bool RevokeToken(SecurityToken securityToken)
+    /// <summary>
+    /// Registers a new permission in the security context.
+    /// </summary>
+    /// <param name="permission">
+    /// The permission to register.
+    /// </param>
+    /// <exception cref="ArgumentException">
+    /// The <see cref="SecurityObject"/> is already registered in a security context or is already signed.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// A <see cref="SecurityObject"/> with the same unique identifier is already registered.
+    /// </exception>
+    public void RegisterPermission(Permission permission)
     {
-        if (!securityToken.IsValid())
-        {
-            throw new SecurityException($"The token {securityToken.TokenId} is invalid");
-        }
-
-        _securityObjects.Remove(securityToken.UniqueIdentifier);
-        return _tokens.Remove(securityToken.UniqueIdentifier);
-    }
-
-    public bool ValidateToken(SecurityToken securityToken)
-    {
-        return _securityObjects.ContainsKey(securityToken.UniqueIdentifier)
-               && _tokens.TryGetValue(securityToken.UniqueIdentifier, out SecurityToken? registeredToken)
-               && registeredToken == securityToken;
+        AddSecurityObject(permission);
     }
 
     /// <summary>
-    /// Adds the given <paramref name="permission"/> to the <see cref="_permissions"/>.
+    /// Checks if the specified token has the specified permission.
     /// </summary>
-    /// <param name="permission">An instance of the <see cref="Permission"/>.</param>
-    /// <returns>True if the permission was registered successfully, otherwise false.</returns>
-    public bool RegisterPermission(Permission permission)
+    /// <param name="token">
+    /// The token to check.
+    /// </param>
+    /// <param name="permission">
+    /// The registered permission to check.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> if the token has the specified permission; otherwise, <see langword="false"/>.
+    /// </returns>
+    /// <exception cref="SecurityException">
+    /// The token is invalid or the permission is not registered or invalid.
+    /// </exception>
+    public bool HasPermission(Token token,  Permission permission)
     {
-        if (!ValidatePermissionObject(permission))
-        {
-            throw new ArgumentException("The permission is not valid");
-        }
-
-        if (!_permissions.ContainsKey(permission.ToString()))
-        {
-            AddSecurityObject(permission);
-            _permissions[permission.PermissionId] = permission;
-            return true;
-        }
-
-        return false;
-    }
-
-    public virtual bool HasPermission(SecurityToken securityToken, Permission permission)
-    {
-        if (!securityToken.IsValid())
-        {
-            throw new SecurityException($"The token {securityToken.TokenId} is invalid");
-        }
-
-        Permission resolvedPerm = GetPermissions(permission.ToString()).Single();
-        return securityToken.Permissions.Contains(resolvedPerm);
-    }
-
-    internal bool ValidatePermission(Permission permission)
-    {
-        return ValidatePermissionObject(permission)
-            && _securityObjects.TryGetValue(permission.UniqueIdentifier, out _)
-            && _permissions.TryGetValue(permission, out Permission? registeredPermission)
-            && registeredPermission == permission;
+        return HasPermission(token, permission.PermissionId);
     }
 
     /// <summary>
-    /// Gets the corresponding permission object.
+    /// Checks if the specified token has the specified permission.
     /// </summary>
-    /// <param name="permissionNames">The fully-qualified name of the permission.</param>
-    /// <returns>An instance of <see cref="Permission"/> or a <see cref="SecurityException"/> when the requested permission is not declared.</returns>
-    public Permission[] GetPermissions(params string[] permissionNames)
+    /// <param name="token">
+    /// The token to check.
+    /// </param>
+    /// <param name="permissionId">
+    /// The registered permission ID to check.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> if the token has the specified permission; otherwise, <see langword="false"/>.
+    /// </returns>
+    /// <exception cref="SecurityException">
+    /// The token is invalid or the permission is not registered or invalid.
+    /// </exception>
+    public virtual bool HasPermission(Token token, string permissionId)
     {
-        List<Permission> permissions = [];
+        CheckDisposed();
 
-        foreach (var permissionName in permissionNames)
+        Ensure.Any.IsNotNull(token, nameof(token));
+        Ensure.String.IsNotNullOrEmpty(permissionId, nameof(permissionId));
+
+        if (!token.IsValid(this))
         {
-            if (_permissions.TryGetValue(permissionName, out Permission? value))
-            {
-                permissions.Add(value);
-            }
-            else
-            {
-                throw new SecurityException($"The permission {permissionName} is not declared");
-            }
+            throw new SecurityException($"The token {token.TokenId} is invalid");
         }
 
-        return permissions.ToArray();
+        Permission resolvedPermission = ResolvePermission(permissionId);
+        return token.Permissions.Contains(resolvedPermission);
     }
 
-    private static bool ValidatePermissionObject(Permission permission)
+    /// <summary>
+    /// Resolves the specified permission IDs to registered <see cref="Permission"/> instances.
+    /// </summary>
+    /// <param name="permissionIds">
+    /// The permission IDs to resolve.
+    /// </param>
+    /// <returns>
+    /// An enumerable collection of registered <see cref="Permission"/> instances.
+    /// </returns>
+    /// <exception cref="SecurityException">
+    /// One of the permission IDs is not registered or the permission is invalid.
+    /// </exception>
+    public IEnumerable<Permission> ResolvePermissions(IEnumerable<string> permissionIds)
     {
-        return !string.IsNullOrEmpty(permission.Scope.Trim())
-            && !string.IsNullOrEmpty(permission.Name.Trim());
+        return permissionIds.Select(ResolvePermission).ToArray();
     }
 
+    /// <summary>
+    /// Resolves the specified permission ID to a registered <see cref="Permission"/>.
+    /// </summary>
+    /// <param name="permissionId">
+    /// The permission ID to resolve.
+    /// </param>
+    /// <returns>
+    /// The registered <see cref="Permission"/> with the specified ID.
+    /// </returns>
+    /// <exception cref="SecurityException">
+    /// The permission ID is not registered or the permission is invalid.
+    /// </exception>
+    public Permission ResolvePermission(string permissionId)
+    {
+        CheckDisposed();
+
+        Ensure.String.IsNotNullOrEmpty(permissionId, nameof(permissionId));
+
+        var permission = GetSecurityObjects<Permission>()
+            .FirstOrDefault(p => p.PermissionId == permissionId);
+
+        if (permission == null)
+        {
+            throw new SecurityException($"The permission {permissionId} is not registered");
+        }
+
+        if (!permission.IsValid())
+        {
+            throw new SecurityException($"The permission {permission.PermissionId} is invalid");
+        }
+
+        return permission;
+    }
+
+    /// <summary>
+    /// Checks if the <see cref="SecurityContext"/> has been disposed.
+    /// </summary>
+    /// <exception cref="ObjectDisposedException">
+    /// The <see cref="SecurityContext"/> has been disposed.
+    /// </exception>
+    protected void CheckDisposed()
+    {
+        if (Disposed)
+        {
+            throw new ObjectDisposedException(nameof(SecurityContext));
+        }
+    }
+
+    /// <summary>
+    /// Disposes the <see cref="SecurityContext"/> and releases all resources.
+    /// </summary>
+    /// <param name="disposing">
+    /// A value indicating whether the method is called from the <see cref="Dispose()"/> method.
+    /// </param>
     protected virtual void Dispose(bool disposing)
     {
         if (!_disposed)
         {
             if (disposing)
             {
-                _tokens.Clear();
-                _permissions.Clear();
+                foreach (var securityObject in _securityObjects.Values)
+                {
+                    securityObject.Dispose();
+                }
+
+                _securityObjects.Clear();
             }
 
             _secretKey = null!;
@@ -265,9 +524,15 @@ public class SecurityContext : IDisposable
         }
     }
 
+    /// <inheritdoc/>
     public void Dispose()
     {
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
+
+    /// <inheritdoc/>
+    public IEnumerator<SecurityObject> GetEnumerator() => _securityObjects.Values.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

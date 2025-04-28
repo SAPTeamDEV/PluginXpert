@@ -11,24 +11,14 @@ using SAPTeam.PluginXpert.Types;
 
 namespace SAPTeam.PluginXpert;
 
-public class SecurityToken : SecurityObject
+/// <summary>
+/// Represents a security token that can be used to securely authenticate plugins and their permissions.
+/// </summary>
+public sealed class Token : SecurityObject
 {
     /// <inheritdoc/>
-    public override string UniqueIdentifier
-    {
-        get
-        {
-            var sb = new StringBuilder();
-            sb.Append($"token$");
-            sb.Append($"{Owner}@{Domain}");
-            if (Digest != null)
-            {
-                sb.Append($"-{Digest}");
-            }
-            return sb.ToString();
-        }
-    }
-    
+    public override string UniqueIdentifier => $"token${TokenId}";
+
     /// <inheritdoc/>
     public override string CurrentState
     {
@@ -49,17 +39,21 @@ public class SecurityToken : SecurityObject
         }
     }
 
+    /// <summary>
+    /// Gets the unique identifier of this token.
+    /// </summary>
     public string TokenId
     {
         get
         {
             var sb = new StringBuilder();
 
-            sb.Append($"{Owner}@{Domain}");
+            sb.Append($"{Owner}");
             if (Digest != null)
             {
                 sb.Append($"-{Digest}");
             }
+            sb.Append($"@{Domain}");
 
             return sb.ToString();
         }
@@ -85,10 +79,30 @@ public class SecurityToken : SecurityObject
     /// </summary>
     public ImmutableArray<Permission> Permissions { get; }
 
-    public SecurityToken(string domain,
-                         string owner,
-                         string? digest,
-                         Permission[]? permissions)
+    /// <summary>
+    /// Gets a value indicating whether this token has been revoked.
+    /// </summary>
+    public bool Revoked { get; private set; }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Token"/> class.
+    /// </summary>
+    /// <param name="domain">
+    /// The domain that this token belongs to.
+    /// </param>
+    /// <param name="owner">
+    /// The owner entity name of this token.
+    /// </param>
+    /// <param name="digest">
+    /// The digest of this token's owner.
+    /// </param>
+    /// <param name="permissions">
+    /// The permissions granted to this token.
+    /// </param>
+    internal Token(string domain,
+                   string owner,
+                   string? digest,
+                   IEnumerable<Permission>? permissions)
     {
         Ensure.String.IsNotNullOrEmpty(domain, nameof(domain));
         Ensure.String.IsNotNullOrEmpty(owner, nameof(owner));
@@ -99,26 +113,54 @@ public class SecurityToken : SecurityObject
         Permissions = permissions?.ToImmutableArray() ?? [];
     }
 
+    /// <inheritdoc/>
     public override bool IsValid()
     {
         return base.IsValid()
-            && Parent!.ValidateToken(this);
+               && Parent!.TryGetSecurityObject<Token>(UniqueIdentifier, out Token? registeredToken)
+               && registeredToken == this;
     }
 
+    /// <summary>
+    /// Revokes this token.
+    /// </summary>
+    /// <returns>
+    /// <see langword="true"/> if the token was revoked successfully; otherwise, <see langword="false"/>.
+    /// </returns>
     public bool Revoke()
+    {
+        if (Revoked || Disposed)
+        {
+            return false;
+        }
+
+        var revoked = Parent?.RemoveSecurityObject(this) ?? false;
+
+        if (revoked)
+        {
+            Revoked = true;
+        }
+
+        return revoked;
+    }
+
+    /// <inheritdoc/>
+    protected override void Dispose(bool disposing)
     {
         if (Disposed)
         {
-            return false;
-        }
-        if (Parent == null)
-        {
-            return false;
+            return;
         }
 
-        return Parent.RevokeToken(this);
+        if (disposing)
+        {
+            _ = Revoke();
+        }
+
+        base.Dispose(disposing);
     }
 
+    /// <inheritdoc/>
     public override string ToString()
     {
         return TokenId;

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Security;
 using System.Text;
 
 using EnsureThat;
@@ -12,7 +13,7 @@ namespace SAPTeam.PluginXpert;
 public class Permission : SecurityObject
 {
     /// <inheritdoc/>
-    public override string UniqueIdentifier => $"{GetType().Name.ToLowerInvariant()}${PermissionId}";
+    public override string UniqueIdentifier => $"permission${PermissionId}";
 
     /// <inheritdoc/>
     public override string CurrentState
@@ -39,7 +40,7 @@ public class Permission : SecurityObject
     }
 
     /// <summary>
-    /// Gets the fully-qualified name of this permission, which is a combination of the scope and name.
+    /// Gets the fully-qualified name of this permission.
     /// </summary>
     public string PermissionId => $"{Scope}:{Name}";
 
@@ -73,6 +74,27 @@ public class Permission : SecurityObject
     /// </summary>
     public bool RuntimePermission { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Permission"/> class.
+    /// </summary>
+    /// <param name="scope">
+    /// The scope of this permission. it is highly recommended to use the implementation's interface name as the scope.
+    /// </param>
+    /// <param name="name">
+    /// The name of this permission.
+    /// </param>
+    /// <param name="friendlyName">
+    /// The friendly name of this permission. It is used for display purposes only.
+    /// </param>
+    /// <param name="description">
+    /// The description of this permission. It is used for display purposes only.
+    /// </param>
+    /// <param name="sensitivity">
+    /// The sensitivity level of this permission.
+    /// </param>
+    /// <param name="runtimePermission">
+    /// A value indicating whether this permission can be granted at runtime.
+    /// </param>
     public Permission(string scope,
                       string name,
                       string? friendlyName,
@@ -80,8 +102,11 @@ public class Permission : SecurityObject
                       PermissionSensitivity sensitivity = PermissionSensitivity.Low,
                       bool runtimePermission = false)
     {
-        Ensure.String.IsNotNullOrEmpty(scope, nameof(scope));
-        Ensure.String.IsNotNullOrEmpty(name, nameof(name));
+        Ensure.Any.IsNotNull(scope, nameof(scope));
+        Ensure.String.IsNotEmptyOrWhiteSpace(scope, nameof(scope));
+
+        Ensure.Any.IsNotNull(name, nameof(name));
+        Ensure.String.IsNotEmptyOrWhiteSpace(name, nameof(name));
 
         Scope = scope.Trim().ToLowerInvariant();
         Name = name.Trim().ToLowerInvariant();
@@ -91,10 +116,12 @@ public class Permission : SecurityObject
         RuntimePermission = runtimePermission;
     }
 
+    /// <inheritdoc/>
     public override bool IsValid()
     {
         return base.IsValid()
-            && Parent!.ValidatePermission(this);
+               && Parent!.TryGetSecurityObject<Permission>(UniqueIdentifier, out Permission? registeredPermission)
+               && registeredPermission == this;
     }
 
     /// <inheritdoc/>

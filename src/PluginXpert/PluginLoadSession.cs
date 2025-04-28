@@ -31,7 +31,7 @@ namespace SAPTeam.PluginXpert
 
         public Assembly? Assembly { get; set; }
 
-        public SecurityToken? Token { get; set; }
+        public Token? Token { get; set; }
 
         public IPlugin? Instance { get; set; }
 

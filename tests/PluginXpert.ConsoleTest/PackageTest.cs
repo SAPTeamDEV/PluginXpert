@@ -30,6 +30,24 @@ class Program
 
             pm.LoadPlugins(package);
 
+            Console.WriteLine($"Initiated {pm.LoadSessions.Count} plugin load sessions.");
+            Console.WriteLine($"Loaded {pm.Plugins.Count()} plugins from {pluginPath}");
+
+            Console.WriteLine();
+            Console.WriteLine("Sessions: ");
+            foreach (var session in pm.LoadSessions)
+            {
+                Console.WriteLine($"- {session.Entry.Id}: ({session.Result})");
+                if (session.Exception != null)
+                {
+                    Console.WriteLine($"  {session.Exception.GetType().Name}: {session.Exception.Message}");
+                    Console.WriteLine(session.Exception.StackTrace);
+                }
+            }
+
+            Console.WriteLine();
+            Console.WriteLine();
+
             var commands = pm.ValidPlugins;
 
             if (args.Length == 0)

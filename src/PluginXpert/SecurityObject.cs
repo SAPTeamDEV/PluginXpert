@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace SAPTeam.PluginXpert
 {
+    /// <summary>
+    /// Base class for all security objects.
+    /// </summary>
     public abstract class SecurityObject : IDisposable
     {
         private bool _disposed;
@@ -35,16 +38,49 @@ namespace SAPTeam.PluginXpert
         /// </summary>
         public ImmutableArray<byte>? Signature { get; internal set; }
 
+        /// <summary>
+        /// Gets the parent <see cref="SecurityContext"/> of this security object.
+        /// </summary>
         public SecurityContext? Parent { get; internal set; }
 
+        /// <summary>
+        /// Checks if this security object is valid in the given security context.
+        /// </summary>
+        /// <param name="securityContext">
+        /// The security context to check against.
+        /// </param>
+        /// <returns>
+        /// <see langword="true"/> if this security object is valid in the given security context; otherwise, <see langword="false"/>.
+        /// </returns>
+        public bool IsValid(SecurityContext securityContext)
+        {
+            return Parent == securityContext
+                   && IsValid();
+        }
+
+        /// <summary>
+        /// Checks if this security object is valid.
+        /// </summary>
+        /// <returns>
+        /// <see langword="true"/> if this security object is valid; otherwise, <see langword="false"/>."
+        /// </returns>
         public virtual bool IsValid()
         {
             return !Disposed
                 && Parent != null
                 && !Parent.Disposed
-                && Parent.ValidateSecurityObject(this);
+                && Parent.VerifySecurityObject(this);
         }
 
+        /// <summary>
+        /// Creates a normal current state string from the unique identifier and the properties.
+        /// </summary>
+        /// <param name="properties">
+        /// The properties to include in the state string.
+        /// </param>
+        /// <returns>
+        /// A string that represents the current state of this security object.
+        /// </returns>
         protected string CreateStateString(Dictionary<string, string> properties)
         {
             var sb = new StringBuilder();
@@ -60,12 +96,20 @@ namespace SAPTeam.PluginXpert
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Disposes the current security object.
+        /// </summary>
+        /// <param name="disposing">
+        /// true if the method is called from Dispose; false if it is called from the finalizer.
+        /// </param>
         protected virtual void Dispose(bool disposing)
         {
             if (!_disposed)
             {
-                Parent = null;
-                Signature = null;
+                if (disposing)
+                {
+                    _ = Parent?.RemoveSecurityObject(this);
+                }
 
                 _disposed = true;
             }
@@ -106,9 +150,9 @@ namespace SAPTeam.PluginXpert
         /// <returns>
         /// true if the two <see cref="SecurityObject"/> instances are equal; otherwise, false.
         /// </returns>
-        public static bool operator ==(SecurityObject left, SecurityObject right)
+        public static bool operator ==(SecurityObject? left, SecurityObject? right)
         {
-            return left.Equals(right);
+            return left!.Equals(right);
         }
 
         /// <summary>
@@ -123,7 +167,7 @@ namespace SAPTeam.PluginXpert
         /// <returns>
         /// true if the two <see cref="SecurityObject"/> instances are not equal; otherwise, false.
         /// </returns>
-        public static bool operator !=(SecurityObject left, SecurityObject right)
+        public static bool operator !=(SecurityObject? left, SecurityObject? right)
         {
             return !(left == right);
         }

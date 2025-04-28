@@ -47,7 +47,7 @@ public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, I
     }
 
     /// <summary>
-    /// Gets the permission manager associated with this instance.
+    /// Gets the security context associated with this instance.
     /// </summary>
     public SecurityContext SecurityContext { get; }
     
