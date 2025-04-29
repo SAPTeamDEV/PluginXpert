@@ -9,12 +9,9 @@ class Program
 
     static void Main(string[] args)
     {
-        SecurityContext securityContext = new();
-        securityContext.RegisterPermission(new("plugin", "test", "Test", "Ability to test"));
-
-        var pm = new PluginManager(securityContext)
+        var pm = new PluginManager()
         {
-            new DefaultPluginImplementation()
+            new NovaPluginImplementation()
         };
 
         try

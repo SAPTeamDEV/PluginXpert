@@ -74,6 +74,8 @@ public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, I
             throw new InvalidOperationException($"Plugin implementation {implId} already registered");
         }
 
+        impl.Initialize(SecurityContext);
+
         _implementations[implId] = impl;
     }
 

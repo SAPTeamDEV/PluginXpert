@@ -33,6 +33,8 @@ public abstract class PluginImplementation : IReadOnlyCollection<PluginContext>,
         
     }
 
+    internal protected abstract void Initialize(SecurityContext securityContext);
+
     internal void Add(PluginContext context)
     {
         _plugins.Add(context);
@@ -64,7 +66,10 @@ public abstract class PluginImplementation : IReadOnlyCollection<PluginContext>,
                 _plugins.Clear();
                 _plugins = null!;
 
-                Directory.Delete(TempPath, true);
+                if (Directory.Exists(TempPath))
+                {
+                    Directory.Delete(TempPath, true);
+                }
             }
 
             _disposed = true;

@@ -2,7 +2,7 @@
 
 namespace TestPlugin;
 
-public class Class1 : IPlugin
+public class Class1 : INovaPlugin
 {
     public void Dispose()
     {

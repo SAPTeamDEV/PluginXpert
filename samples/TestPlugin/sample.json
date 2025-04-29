@@ -3,8 +3,8 @@
   "Version": "1.0",
   "Name": "Sample",
   "Description": "A Plugin used to demnostrate the plugin system",
-  "Interface": "pluginxpert",
-  "InterfaceVersion": "3.0",
+  "Interface": "nova",
+  "InterfaceVersion": "0.1",
   "Assembly": "TestPlugin.dll",
   "Class": "Class1"
 }
