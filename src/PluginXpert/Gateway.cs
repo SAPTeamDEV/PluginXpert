@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security;
-using System.Text;
-using System.Threading.Tasks;
-
-using SAPTeam.PluginXpert.Types;
+﻿using SAPTeam.PluginXpert.Types;
 
 namespace SAPTeam.PluginXpert;
 
@@ -14,10 +7,8 @@ namespace SAPTeam.PluginXpert;
 /// </summary>
 public class Gateway : IGateway
 {
-    private bool _disposed;
-
     /// <inheritdoc/>
-    public bool Disposed => _disposed;
+    public bool Disposed { get; private set; }
 
     /// <summary>
     /// Gets the token that this gateway is associated with.
@@ -30,10 +21,7 @@ public class Gateway : IGateway
     /// <param name="token">
     /// The token that this gateway is associated with.
     /// </param>
-    public Gateway(Token token)
-    {
-        Token = token;
-    }
+    public Gateway(Token token) => Token = token;
 
     /// <inheritdoc/>
     public IEnumerable<string> GetGrantedPermissions()
@@ -69,7 +57,7 @@ public class Gateway : IGateway
             return true;
         }
 
-        var newToken = Token.Parent!.RequestPermission(Token, permissionId);
+        Token? newToken = Token.Parent!.RequestPermission(Token, permissionId);
 
         if (newToken == null)
         {
@@ -120,11 +108,11 @@ public class Gateway : IGateway
     /// </param>
     protected virtual void Dispose(bool disposing)
     {
-        if (!_disposed)
+        if (!Disposed)
         {
             Token = null!;
 
-            _disposed = true;
+            Disposed = true;
         }
     }
 

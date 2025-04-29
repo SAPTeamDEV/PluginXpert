@@ -1,13 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
+﻿using System.Collections.Immutable;
 using System.Text;
-using System.Threading.Tasks;
 
 using EnsureThat;
-
-using SAPTeam.PluginXpert.Types;
 
 namespace SAPTeam.PluginXpert;
 
@@ -28,7 +22,7 @@ public sealed class Token : SecurityObject
 
             if (Permissions.Length > 0)
             {
-                var permissions = string.Join(", ", Permissions.Select(p => p.PermissionId));
+                string permissions = string.Join(", ", Permissions.Select(p => p.PermissionId));
                 properties = new Dictionary<string, string>
                 {
                     ["permissions"] = permissions
@@ -46,13 +40,14 @@ public sealed class Token : SecurityObject
     {
         get
         {
-            var sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder();
 
             sb.Append($"{Owner}");
             if (Digest != null)
             {
                 sb.Append($"-{Digest}");
             }
+
             sb.Append($"@{Domain}");
 
             return sb.ToString();
@@ -134,7 +129,7 @@ public sealed class Token : SecurityObject
             return false;
         }
 
-        var revoked = Parent?.RemoveSecurityObject(this) ?? false;
+        bool revoked = Parent?.RemoveSecurityObject(this) ?? false;
 
         if (revoked)
         {
@@ -161,8 +156,5 @@ public sealed class Token : SecurityObject
     }
 
     /// <inheritdoc/>
-    public override string ToString()
-    {
-        return TokenId;
-    }
+    public override string ToString() => TokenId;
 }

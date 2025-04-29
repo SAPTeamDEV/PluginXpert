@@ -1,38 +1,28 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using DouglasDwyer.CasCore;
+﻿using DouglasDwyer.CasCore;
 
 using Mono.Cecil;
 
-namespace SAPTeam.PluginXpert
+namespace SAPTeam.PluginXpert;
+
+public class CasLoader : CasAssemblyLoader
 {
-    public class CasLoader : CasAssemblyLoader
+    private readonly PluginEntry _pluginEntry;
+
+    public CasLoader(PluginEntry entry, CasPolicy policy, bool isCollectible) : base(policy, isCollectible) => _pluginEntry = entry;
+
+    /// <inheritdoc/>
+    protected override void InstrumentAssembly(AssemblyDefinition assembly)
     {
-        PluginEntry _pluginEntry;
-
-        public CasLoader(PluginEntry entry, CasPolicy policy, bool isCollectible) : base(policy, isCollectible)
+        if (!_pluginEntry.KeepNamespace)
         {
-            _pluginEntry = entry;
-        }
-
-        /// <inheritdoc/>
-        protected override void InstrumentAssembly(AssemblyDefinition assembly)
-        {
-            if (!_pluginEntry.KeepNamespace)
+            foreach (TypeDefinition? type in assembly.MainModule.Types)
             {
-                foreach (var type in assembly.MainModule.Types)
-                {
-                    if (type.Name == "<Module>") continue;
+                if (type.Name == "<Module>") continue;
 
-                    type.Namespace = $"{_pluginEntry.Interface}:{_pluginEntry.Id}";
-                }
+                type.Namespace = $"{_pluginEntry.Interface}:{_pluginEntry.Id}";
             }
-
-            base.InstrumentAssembly(assembly);
         }
+
+        base.InstrumentAssembly(assembly);
     }
 }

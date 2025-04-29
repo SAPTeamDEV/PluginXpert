@@ -1,18 +1,17 @@
 ﻿using SAPTeam.PluginXpert;
-using SAPTeam.PluginXpert.Types;
 
 namespace PluginXpert.ConsoleTest;
 
-class Program
+internal class Program
 {
-    static string pluginPath = "..\\..\\..\\..\\..\\samples\\TestPlugin\\bin\\sample.plx";
+    private static readonly string pluginPath = "..\\..\\..\\..\\..\\samples\\TestPlugin\\bin\\sample.plx";
 
-    static void Main(string[] args)
+    private static void Main(string[] args)
     {
-        var pm = new PluginManager()
-        {
+        PluginManager pm =
+        [
             new NovaPluginImplementation()
-        };
+        ];
 
         try
         {
@@ -22,7 +21,7 @@ class Program
                 Console.ReadLine();
             }
 
-            var package = new PluginPackage(pluginPath);
+            PluginPackage package = new PluginPackage(pluginPath);
             package.LoadFromFile();
 
             pm.LoadPlugins(package);
@@ -32,7 +31,7 @@ class Program
 
             Console.WriteLine();
             Console.WriteLine("Sessions: ");
-            foreach (var session in pm.LoadSessions)
+            foreach (PluginLoadSession session in pm.LoadSessions)
             {
                 Console.WriteLine($"- {session.Entry.Id}: ({session.Result})");
                 if (session.Exception != null)
@@ -45,12 +44,12 @@ class Program
             Console.WriteLine();
             Console.WriteLine();
 
-            var commands = pm.ValidPlugins;
+            IEnumerable<PluginContext> commands = pm.ValidPlugins;
 
             if (args.Length == 0)
             {
                 Console.WriteLine("Commands: ");
-                foreach (var command in commands)
+                foreach (PluginContext command in commands)
                 {
                     Console.WriteLine($"{command.Id}");
                 }
@@ -61,7 +60,7 @@ class Program
                 {
                     Console.WriteLine($"-- {commandName} --");
 
-                    var command = commands.FirstOrDefault(c => c.Id == commandName);
+                    PluginContext? command = commands.FirstOrDefault(c => c.Id == commandName);
                     if (command == null)
                     {
                         Console.WriteLine("No such command is known.");

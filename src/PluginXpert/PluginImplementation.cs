@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections;
 
 using DouglasDwyer.CasCore;
 
@@ -14,9 +9,8 @@ namespace SAPTeam.PluginXpert;
 public abstract class PluginImplementation : IReadOnlyCollection<PluginContext>, IDisposable
 {
     private List<PluginContext> _plugins = [];
-    private bool _disposed;
 
-    public bool Disposed => _disposed;
+    public bool Disposed { get; private set; }
 
     public abstract string Interface { get; }
 
@@ -32,40 +26,28 @@ public abstract class PluginImplementation : IReadOnlyCollection<PluginContext>,
 
     protected PluginImplementation()
     {
-        
+
     }
 
-    internal protected abstract void Initialize(SecurityContext securityContext);
+    protected internal abstract void Initialize(SecurityContext securityContext);
 
-    internal void Add(PluginContext context)
-    {
-        _plugins.Add(context);
-    }
+    internal void Add(PluginContext context) => _plugins.Add(context);
 
-    public virtual bool CheckPluginType(Type type)
-    {
-        return true;
-    }
+    public virtual bool CheckPluginType(Type type) => true;
 
-    public virtual IGateway CreateGateway(PluginLoadSession session)
-    {
-        return new Gateway(session.Token);
-    }
+    public virtual IGateway CreateGateway(PluginLoadSession session) => new Gateway(session.Token);
 
-    public virtual void UpdateAssemblySecurityPolicy(PluginLoadSession session, CasPolicyBuilder policy)
-    {
-        policy.Allow(new TypeBinding(typeof(Gateway), Accessibility.Public));
-    }
+    public virtual void UpdateAssemblySecurityPolicy(PluginLoadSession session, CasPolicyBuilder policy) => policy.Allow(new TypeBinding(typeof(Gateway), Accessibility.Public));
 
     public override string ToString() => $"{Interface}-{Version}";
 
     protected virtual void Dispose(bool disposing)
     {
-        if (!_disposed)
+        if (!Disposed)
         {
             if (disposing)
             {
-                foreach (var plugin in _plugins)
+                foreach (PluginContext plugin in _plugins)
                 {
                     plugin.Dispose();
                 }
@@ -79,7 +61,7 @@ public abstract class PluginImplementation : IReadOnlyCollection<PluginContext>,
                 }
             }
 
-            _disposed = true;
+            Disposed = true;
         }
     }
 

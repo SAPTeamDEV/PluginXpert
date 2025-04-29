@@ -1,19 +1,17 @@
 ﻿using System.Collections.Concurrent;
-using System.Drawing;
-using System.Runtime.CompilerServices;
-using System.Security.Cryptography.X509Certificates;
-using System;
-using SAPTeam.PluginXpert;
 using System.CommandLine;
-using SAPTeam.EasySign;
-using Spectre.Console;
-using Color = Spectre.Console.Color;
-using System.Text.Json.Serialization;
-using System.Text.Json;
 using System.Reflection;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.Json;
+
+using SAPTeam.PluginXpert;
+
+using Spectre.Console;
+
+using Color = Spectre.Console.Color;
 
 namespace PluginXpert.Cli;
 
@@ -21,21 +19,21 @@ internal class Program
 {
     public static PluginPackage Package { get; set; }
 
-    static RootCommand GetCommands()
+    private static RootCommand GetCommands()
     {
-        var root = new RootCommand("Easy Digital Signing Tool");
+        RootCommand root = new RootCommand("Easy Digital Signing Tool");
 
         #region Shared Options
-        var pckArg = new Argument<string>("package", "Plugin Package path");
+        Argument<string> pckArg = new Argument<string>("package", "Plugin Package path");
         #endregion
 
-        var plgArg = new Argument<string>("plugin", "Plugin directory");
+        Argument<string> plgArg = new Argument<string>("plugin", "Plugin directory");
 
-        var plgCfgOpt = new Option<string>("--config", "Plugin's config path");
+        Option<string> plgCfgOpt = new Option<string>("--config", "Plugin's config path");
         plgCfgOpt.AddAlias("-c");
         plgCfgOpt.IsRequired = true;
 
-        var addCmd = new Command("add", "Add new plugin to the package")
+        Command addCmd = new Command("add", "Add new plugin to the package")
         {
             pckArg,
             plgArg,
@@ -49,13 +47,13 @@ internal class Program
         }, pckArg, plgArg, plgCfgOpt);
         root.AddCommand(addCmd);
 
-        var idArg = new Argument<string>("id", "Package Identifier");
+        Argument<string> idArg = new Argument<string>("id", "Package Identifier");
 
-        var nameOpt = new Option<string>("--name", "Package display name");
+        Option<string> nameOpt = new Option<string>("--name", "Package display name");
         nameOpt.AddAlias("-n");
         nameOpt.IsRequired = true;
 
-        var createCmd = new Command("create", "Create new plugin package")
+        Command createCmd = new Command("create", "Create new plugin package")
         {
             pckArg,
             idArg,
@@ -69,25 +67,22 @@ internal class Program
         }, pckArg, idArg, nameOpt);
         root.AddCommand(createCmd);
 
-        var cfgDestArg = new Argument<string>("file", "Destination path");
+        Argument<string> cfgDestArg = new Argument<string>("file", "Destination path");
         cfgDestArg.SetDefaultValue("plugin.json");
 
-        var generateCmd = new Command("generate", "Generate plugin config file")
+        Command generateCmd = new Command("generate", "Generate plugin config file")
         {
             cfgDestArg,
         };
 
-        generateCmd.SetHandler((pluginConfigDestinationPath) =>
-        {
-            GeneratePluginConfig(pluginConfigDestinationPath);
-        }, cfgDestArg);
+        generateCmd.SetHandler(GeneratePluginConfig, cfgDestArg);
         root.AddCommand(generateCmd);
 
-        var pfxOpt = new Option<string>("--pfx", "PFX File contains certificate and private key");
-        var pfxPassOpt = new Option<string>("--pfx-password", "PFX File password");
-        var pfxNoPassOpt = new Option<bool>("--no-password", "Ignore PFX File password prompt");
+        Option<string> pfxOpt = new Option<string>("--pfx", "PFX File contains certificate and private key");
+        Option<string> pfxPassOpt = new Option<string>("--pfx-password", "PFX File password");
+        Option<bool> pfxNoPassOpt = new Option<bool>("--no-password", "Ignore PFX File password prompt");
 
-        var signCmd = new Command("sign", "Sign bundle with certificate")
+        Command signCmd = new Command("sign", "Sign bundle with certificate")
         {
             pckArg,
             pfxOpt,
@@ -99,16 +94,16 @@ internal class Program
         {
             InitBundle(packagePath);
 
-            X509Certificate2Collection collection = new();
+            X509Certificate2Collection collection = [];
 
             if (!string.IsNullOrEmpty(pfxFilePath))
             {
                 string pfpass = !string.IsNullOrEmpty(pfxFilePassword) ? pfxFilePassword : !pfxNoPasswordPrompt ? SecurePrompt("Enter PFX File password (if needed): ") : "";
 
-                var tempCollection = new X509Certificate2Collection();
+                X509Certificate2Collection tempCollection = [];
                 tempCollection.Import(pfxFilePath, pfpass, X509KeyStorageFlags.EphemeralKeySet);
 
-                var cond = tempCollection.Where(x => x.HasPrivateKey);
+                IEnumerable<X509Certificate2> cond = tempCollection.Where(x => x.HasPrivateKey);
                 if (cond.Any())
                 {
                     collection.AddRange(cond.ToArray());
@@ -123,13 +118,13 @@ internal class Program
                 X509Store store = new X509Store("MY", StoreLocation.CurrentUser);
                 store.Open(OpenFlags.ReadOnly | OpenFlags.OpenExistingOnly);
 
-                var mapping = new Dictionary<string, X509Certificate2>();
-                foreach (var cert in store.Certificates)
+                Dictionary<string, X509Certificate2> mapping = [];
+                foreach (X509Certificate2 cert in store.Certificates)
                 {
                     mapping[$"{cert.GetNameInfo(X509NameType.SimpleName, false)},{cert.GetNameInfo(X509NameType.SimpleName, true)},{cert.Thumbprint}"] = cert;
                 }
 
-                var selection = AnsiConsole.Prompt(
+                List<string> selection = AnsiConsole.Prompt(
                     new MultiSelectionPrompt<string>()
                         .PageSize(10)
                         .Title("Select Signing Certificates")
@@ -145,7 +140,7 @@ internal class Program
 
         root.AddCommand(signCmd);
 
-        var verifyCmd = new Command("verify", "Verify bundle")
+        Command verifyCmd = new Command("verify", "Verify bundle")
         {
             pckArg,
         };
@@ -161,18 +156,15 @@ internal class Program
         return root;
     }
 
-    static int Main(string[] args)
+    private static int Main(string[] args)
     {
-        var root = GetCommands();
+        RootCommand root = GetCommands();
         return root.Invoke(args);
     }
 
-    static void InitBundle(string packagePath)
-    {
-        Package = new(packagePath);
-    }
+    private static void InitBundle(string packagePath) => Package = new(packagePath);
 
-    static void Create(string id, string name)
+    private static void Create(string id, string name)
     {
         Package.Manifest.StoreOriginalFiles = true;
 
@@ -184,20 +176,20 @@ internal class Program
         Console.WriteLine($"Plugin package with id: {id} created successfully");
     }
 
-    static void GeneratePluginConfig(string pluginConfigDestinationPath)
+    private static void GeneratePluginConfig(string pluginConfigDestinationPath)
     {
-        var blankPlugin = new PluginEntry();
+        PluginEntry blankPlugin = new PluginEntry();
 
-        var jsonData = JsonSerializer.Serialize(blankPlugin, new JsonSerializerOptions()
+        string jsonData = JsonSerializer.Serialize(blankPlugin, new JsonSerializerOptions()
         {
             WriteIndented = true,
         });
-        var buffer = Encoding.UTF8.GetBytes(jsonData);
+        byte[] buffer = Encoding.UTF8.GetBytes(jsonData);
 
         File.WriteAllBytes(pluginConfigDestinationPath, buffer);
     }
 
-    static void Add(string pluginPath,string pluginConfigPath)
+    private static void Add(string pluginPath, string pluginConfigPath)
     {
         AnsiConsole.Status()
             .AutoRefresh(true)
@@ -208,8 +200,8 @@ internal class Program
 
                 ctx.Status("[yellow]Loading Plugin Config[/]");
 
-                var configFile = File.OpenRead(pluginConfigPath);
-                var config = JsonSerializer.Deserialize<PluginEntry>(configFile);
+                FileStream configFile = File.OpenRead(pluginConfigPath);
+                PluginEntry config = JsonSerializer.Deserialize<PluginEntry>(configFile);
 
                 ctx.Status("[yellow]Validating Plugin[/]");
 
@@ -225,25 +217,18 @@ internal class Program
                     return;
                 }
 
-                var assemblyPath = Path.Combine(pluginPath, config.Assembly);
+                string assemblyPath = Path.Combine(pluginPath, config.Assembly);
                 if (!File.Exists(assemblyPath))
                 {
                     Console.WriteLine("File not found: " + assemblyPath);
                 }
 
-                var assembly = Assembly.LoadFrom(assemblyPath);
-                var attribute = assembly.GetCustomAttribute<TargetFrameworkAttribute>();
+                Assembly assembly = Assembly.LoadFrom(assemblyPath);
+                TargetFrameworkAttribute attribute = assembly.GetCustomAttribute<TargetFrameworkAttribute>();
                 if (attribute != null)
                 {
-                    var frameworkVer = ParseFrameworkVersion(attribute.FrameworkName);
-                    if (frameworkVer != null)
-                    {
-                        config.TargetFrameworkVersion = frameworkVer;
-                    }
-                    else
-                    {
-                        throw new FormatException("Cannot parse the framework string");
-                    }
+                    Version frameworkVer = ParseFrameworkVersion(attribute.FrameworkName);
+                    config.TargetFrameworkVersion = frameworkVer ?? throw new FormatException("Cannot parse the framework string");
                 }
                 else
                 {
@@ -251,14 +236,14 @@ internal class Program
                     return;
                 }
 
-                using var sha256 = SHA256.Create();
-                using var stream = File.OpenRead(assemblyPath);
-                var hash = sha256.ComputeHash(stream);
+                using SHA256 sha256 = SHA256.Create();
+                using FileStream stream = File.OpenRead(assemblyPath);
+                byte[] hash = sha256.ComputeHash(stream);
                 config.BuildRef = string.Concat(hash[^5..].Select(b => b.ToString("x2")));
 
                 ctx.Status("[yellow]Adding Plugin[/]");
 
-                var pluginDest = $"{config.Id}-{config.BuildRef}";
+                string pluginDest = $"{config.Id}-{config.BuildRef}";
                 Parallel.ForEach(SafeEnumerateFiles(pluginPath, "*"), file =>
                 {
                     if (file == Package.BundlePath) return;
@@ -273,7 +258,7 @@ internal class Program
             });
     }
 
-    static void Sign(X509Certificate2Collection certificates)
+    private static void Sign(X509Certificate2Collection certificates)
     {
         AnsiConsole.Status()
             .AutoRefresh(true)
@@ -283,11 +268,11 @@ internal class Program
                 Package.LoadFromFile(false);
 
                 int divider = 0;
-                foreach (var cert in certificates)
+                foreach (X509Certificate2 cert in certificates)
                 {
                     if (divider++ > 0) AnsiConsole.WriteLine();
 
-                    var grid = new Grid();
+                    Grid grid = new Grid();
                     grid.AddColumn(new GridColumn().NoWrap());
                     grid.AddColumn(new GridColumn().PadLeft(2));
                     grid.AddRow("Certificate Info:");
@@ -303,7 +288,7 @@ internal class Program
                     bool verifyCert = VerifyCertificate(cert);
                     if (!verifyCert) continue;
 
-                    var prvKey = cert.GetRSAPrivateKey();
+                    RSA prvKey = cert.GetRSAPrivateKey();
                     if (prvKey == null)
                     {
                         AnsiConsole.MarkupLine($"[{Color.Green}] Failed to Acquire RSA Private Key[/]");
@@ -321,9 +306,9 @@ internal class Program
 
     private static bool VerifyCertificate(X509Certificate2 certificate)
     {
-        List<bool> verifyResults = new();
+        List<bool> verifyResults = [];
 
-        var defaultVerification = Package.VerifyCertificate(certificate, out X509ChainStatus[] statuses);
+        bool defaultVerification = Package.VerifyCertificate(certificate, out X509ChainStatus[] statuses);
         verifyResults.Add(defaultVerification);
 
         AnsiConsole.MarkupLine($"[{(defaultVerification ? Color.Green : Color.Red)}] Certificate Verification {(defaultVerification ? "Successful" : "Failed")}[/]");
@@ -336,10 +321,10 @@ internal class Program
 
             if (timeIssue)
             {
-                var policy = new X509ChainPolicy();
+                X509ChainPolicy policy = new X509ChainPolicy();
                 policy.VerificationFlags |= X509VerificationFlags.IgnoreNotTimeValid;
 
-                var noTimeVerification = Package.VerifyCertificate(certificate, out X509ChainStatus[] noTimeStatuses, policy: policy);
+                bool noTimeVerification = Package.VerifyCertificate(certificate, out X509ChainStatus[] noTimeStatuses, policy: policy);
                 verifyResults.Add(noTimeVerification);
 
                 AnsiConsole.MarkupLine($"[{(noTimeVerification ? Color.Green : Color.Red)}] Certificate Verification without time checking {(noTimeVerification ? "Successful" : "Failed")}[/]");
@@ -352,15 +337,15 @@ internal class Program
 
     private static void EnumerateStatuses(X509ChainStatus[] statuses)
     {
-        foreach (var status in statuses)
+        foreach (X509ChainStatus status in statuses)
         {
             AnsiConsole.MarkupLine($"[{Color.IndianRed}]   {status.StatusInformation}[/]");
         }
     }
 
-    static void Verify()
+    private static void Verify()
     {
-        var colorDict = new Dictionary<string, Color>()
+        Dictionary<string, Color> colorDict = new Dictionary<string, Color>()
         {
             ["file_verified"] = Color.MediumSpringGreen,
             ["file_failed"] = Color.OrangeRed1,
@@ -378,17 +363,17 @@ internal class Program
                 int verifiedCerts = 0;
                 int divider = 0;
 
-                foreach (var cert in Package.Signatures.Entries.Keys)
+                foreach (string cert in Package.Signatures.Entries.Keys)
                 {
                     if (divider++ > 0) AnsiConsole.WriteLine();
 
-                    var certificate = Package.GetCertificate(cert);
+                    X509Certificate2 certificate = Package.GetCertificate(cert);
                     AnsiConsole.MarkupLine($"Verifying Certificate [{Color.Teal}]{certificate.GetNameInfo(X509NameType.SimpleName, false)}[/] Issued by [{Color.Aqua}]{certificate.GetNameInfo(X509NameType.SimpleName, true)}[/]");
 
-                    var verifyCert = VerifyCertificate(certificate);
+                    bool verifyCert = VerifyCertificate(certificate);
                     if (!verifyCert) continue;
 
-                    var verifySign = Package.VerifySignature(cert);
+                    bool verifySign = Package.VerifySignature(cert);
                     AnsiConsole.MarkupLine($"[{(verifySign ? Color.Green : Color.Red)}] Signature Verification {(verifySign ? "Successful" : "Failed")}[/]");
                     if (!verifySign) continue;
 
@@ -430,7 +415,7 @@ internal class Program
 
                 Parallel.ForEach(Package.Manifest.Entries, (entry) =>
                 {
-                    var verifyFile = false;
+                    bool verifyFile = false;
 
                     try
                     {
@@ -527,7 +512,7 @@ internal class Program
         }
     }
 
-    static string SecurePrompt(string prompt)
+    private static string SecurePrompt(string prompt)
     {
         return AnsiConsole.Prompt(
             new TextPrompt<string>(prompt)
@@ -559,13 +544,8 @@ internal class Program
         }
 
         // Try to parse the extracted substring into a Version object.
-        if (Version.TryParse(versionSubString, out Version parsedVersion))
-        {
-            return parsedVersion;
-        }
-        else
-        {
-            throw new FormatException($"Unable to parse version from '{versionSubString}'.");
-        }
+        return Version.TryParse(versionSubString, out Version parsedVersion)
+            ? parsedVersion
+            : throw new FormatException($"Unable to parse version from '{versionSubString}'.");
     }
 }

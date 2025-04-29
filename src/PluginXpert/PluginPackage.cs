@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO.Compression;
-using System.Linq;
-using System.Text;
+﻿using System.IO.Compression;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 using SAPTeam.EasySign;
 
@@ -27,7 +22,7 @@ public class PluginPackage : Bundle
 
     protected override byte[] GetManifestData()
     {
-        var index = Export(PackageInfo);
+        byte[] index = Export(PackageInfo);
 
         Manifest.GetEntries()[PackageInfoFileName] = ComputeSHA512Hash(index);
 
@@ -36,15 +31,12 @@ public class PluginPackage : Bundle
 
     private void UpdatePackageInfo(ZipArchive zip)
     {
-        var index = Export(PackageInfo);
+        byte[] index = Export(PackageInfo);
 
         WriteEntry(zip, PackageInfoFileName, index);
     }
 
-    public bool VerifyPackageInfo()
-    {
-        return VerifyFile(PackageInfoFileName);
-    }
+    public bool VerifyPackageInfo() => VerifyFile(PackageInfoFileName);
 
     protected override void Parse(ZipArchive zip)
     {
@@ -70,7 +62,7 @@ public class PluginPackage : Bundle
 
         using (ZipArchive zip = GetZipArchive())
         {
-            foreach (var entry in zip.Entries)
+            foreach (ZipArchiveEntry entry in zip.Entries)
             {
                 if (entry.FullName.StartsWith(pluginDirectory, StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(entry.Name))
                 {

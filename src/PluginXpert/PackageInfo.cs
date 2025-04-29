@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SAPTeam.PluginXpert;
+﻿namespace SAPTeam.PluginXpert;
 
 public class PackageInfo
 {
@@ -12,5 +6,5 @@ public class PackageInfo
 
     public string Name { get; set; }
 
-    public List<PluginEntry> Plugins { get; set; } = new List<PluginEntry>();
+    public List<PluginEntry> Plugins { get; set; } = [];
 }

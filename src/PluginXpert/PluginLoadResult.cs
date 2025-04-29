@@ -1,23 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace SAPTeam.PluginXpert;
 
-namespace SAPTeam.PluginXpert
+public enum PluginLoadResult
 {
-    public enum PluginLoadResult
-    {
-        Unknown = 0,
+    Unknown = 0,
 
-        AlreadyLoaded,
+    AlreadyLoaded,
 
-        NotSupportedImplementation,
+    NotSupportedImplementation,
 
-        NotSupportedRuntime,
+    NotSupportedRuntime,
 
-        Error,
+    Error,
 
-        Success,
-    }
+    Success,
 }

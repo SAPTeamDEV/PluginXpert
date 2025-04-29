@@ -4,8 +4,8 @@ namespace TestPlugin;
 
 public class Class1 : INovaPlugin
 {
-    IGateway _gateway;
-    INovaGateway _novaGateway;
+    private IGateway _gateway;
+    private INovaGateway _novaGateway;
 
     public void Dispose()
     {
@@ -27,13 +27,13 @@ public class Class1 : INovaPlugin
         Console.WriteLine("Hello World");
 
         Console.WriteLine("Registered Permissions:");
-        foreach (var permission in _gateway.GetRegisteredPermissions())
+        foreach (string? permission in _gateway.GetRegisteredPermissions())
         {
             Console.WriteLine($" - {permission}");
         }
 
         Console.WriteLine("Permissions granted to this plugin:");
-        foreach (var permission in _gateway.GetGrantedPermissions())
+        foreach (string? permission in _gateway.GetGrantedPermissions())
         {
             Console.WriteLine($" - {permission}");
         }

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Security;
-using System.Text;
-
-using EnsureThat;
+﻿using EnsureThat;
 
 namespace SAPTeam.PluginXpert;
 
@@ -133,8 +128,5 @@ public class Permission : SecurityObject
     /// <param name="perm">
     /// The <see cref="Permission"/> instance to convert.
     /// </param>
-    public static implicit operator string(Permission perm)
-    {
-        return perm.ToString();
-    }
+    public static implicit operator string(Permission perm) => perm.ToString();
 }

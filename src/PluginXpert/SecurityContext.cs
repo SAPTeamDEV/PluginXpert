@@ -1,20 +1,13 @@
 ﻿using System.Collections;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
 using System.Security;
 using System.Security.Cryptography;
 using System.Text;
-using System.Xml.Linq;
 
 using DouglasDwyer.CasCore;
 
 using EnsureThat;
-
-using Mono.Cecil;
-
-using SAPTeam.PluginXpert.Types;
 
 namespace SAPTeam.PluginXpert;
 
@@ -23,15 +16,14 @@ namespace SAPTeam.PluginXpert;
 /// </summary>
 public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
 {
-    readonly Dictionary<string, SecurityObject> _securityObjects = [];
-    
-    byte[] _secretKey;
-    bool _disposed;
+    private readonly Dictionary<string, SecurityObject> _securityObjects = [];
+
+    private byte[] _secretKey;
 
     /// <summary>
     /// Gets a value indicating whether this <see cref="SecurityContext"/> has been disposed.
     /// </summary>
-    public bool Disposed => _disposed;
+    public bool Disposed { get; private set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SecurityContext"/> class.
@@ -39,7 +31,7 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
     public SecurityContext()
     {
         _secretKey = new byte[64];
-        using var rng = RandomNumberGenerator.Create();
+        using RandomNumberGenerator rng = RandomNumberGenerator.Create();
         rng.GetBytes(_secretKey);
     }
 
@@ -61,7 +53,7 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
 
         Ensure.Any.IsNotNull(securityObject, nameof(securityObject));
 
-        var uid = securityObject.UniqueIdentifier;
+        string uid = securityObject.UniqueIdentifier;
         if (string.IsNullOrEmpty(uid))
         {
             throw new ArgumentException("The security object does not have a unique identifier");
@@ -95,9 +87,9 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
 
     private byte[] SignSecurityObject(SecurityObject securityObject)
     {
-        using var hmac = new HMACSHA256(_secretKey);
+        using HMACSHA256 hmac = new HMACSHA256(_secretKey);
 
-        var state = securityObject.CurrentState;
+        string state = securityObject.CurrentState;
         byte[] data = Encoding.UTF8.GetBytes(state);
 
         return hmac.ComputeHash(data);
@@ -147,7 +139,7 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
     public T GetSecurityObject<T>(string uniqueIdentifier)
         where T : SecurityObject
     {
-        var securityObject = GetSecurityObject(uniqueIdentifier);
+        SecurityObject securityObject = GetSecurityObject(uniqueIdentifier);
 
         return securityObject is T typedSecurityObject
             ? typedSecurityObject
@@ -241,10 +233,7 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
     /// An enumerable collection of all registered <typeparamref name="T"/> instances.
     /// </returns>
     public IEnumerable<T> GetSecurityObjects<T>()
-        where T : SecurityObject
-    {
-        return GetSecurityObjects().OfType<T>();
-    }
+        where T : SecurityObject => GetSecurityObjects().OfType<T>();
 
     /// <summary>
     /// Verifies the signature of the specified <see cref="SecurityObject"/> against its current state.
@@ -274,7 +263,7 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
             return false;
         }
 
-        var signature = SignSecurityObject(securityObject);
+        byte[] signature = SignSecurityObject(securityObject);
         return securityObject.Signature?.SequenceEqual(signature) ?? false;
     }
 
@@ -287,7 +276,7 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
     /// <returns>
     /// <see langword="true"/> if the <see cref="SecurityObject"/> was removed successfully; otherwise, <see langword="false"/>.
     /// </returns>
-    internal protected bool RemoveSecurityObject(SecurityObject securityObject)
+    protected internal bool RemoveSecurityObject(SecurityObject securityObject)
     {
         CheckDisposed();
 
@@ -315,7 +304,7 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
 
         Ensure.Any.IsNotNull(session, nameof(session));
 
-        var policy = policyBuilder
+        CasPolicy policy = policyBuilder
             .WithDefaultSandbox()
             .Build();
 
@@ -345,9 +334,9 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
 
         Ensure.Any.IsNotNull(session, nameof(session));
 
-        var permissions = ResolvePermissions(session.Entry.Permissions);
+        IEnumerable<Permission> permissions = ResolvePermissions(session.Entry.Permissions);
 
-        var token = new Token(session.Implementation?.Interface ?? throw new ArgumentException("Invalid session"),
+        Token token = new Token(session.Implementation?.Interface ?? throw new ArgumentException("Invalid session"),
                                       session.Entry.Id,
                                       ComputePluginDigest(session),
                                       permissions);
@@ -395,7 +384,7 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
             throw new SecurityException($"The token {token.TokenId} is invalid");
         }
 
-        var permission = ResolvePermission(permissionId);
+        Permission permission = ResolvePermission(permissionId);
 
         if (token.Permissions.Contains(permission))
         {
@@ -412,7 +401,7 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
             return null;
         }
 
-        var newToken = new Token(token.Domain,
+        Token newToken = new Token(token.Domain,
                                  token.Owner,
                                  token.Digest,
                                  token.Permissions.Add(permission));
@@ -443,10 +432,7 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
     /// <returns>
     /// <see langword="true"/> to allow the permission request; <see langword="false"/> to deny it.
     /// </returns>
-    protected bool HandlePermissionRequest(Token token, Permission permission)
-    {
-        return true;
-    }
+    protected bool HandlePermissionRequest(Token token, Permission permission) => true;
 
     /// <summary>
     /// Registers a new permission in the security context.
@@ -460,10 +446,7 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
     /// <exception cref="InvalidOperationException">
     /// A <see cref="SecurityObject"/> with the same unique identifier is already registered.
     /// </exception>
-    public void RegisterPermission(Permission permission)
-    {
-        AddSecurityObject(permission);
-    }
+    public void RegisterPermission(Permission permission) => AddSecurityObject(permission);
 
     /// <summary>
     /// Checks if the specified token has the specified permission.
@@ -506,19 +489,16 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
     /// <exception cref="SecurityException">
     /// The token is invalid or the permission is not registered or invalid.
     /// </exception>
-    public virtual bool HasPermission(Token token,  Permission permission)
+    public virtual bool HasPermission(Token token, Permission permission)
     {
         CheckDisposed();
 
         Ensure.Any.IsNotNull(token, nameof(token));
         Ensure.Any.IsNotNull(permission, nameof(permission));
 
-        if (!token.IsValid(this))
-        {
-            throw new SecurityException($"The token {token.TokenId} is invalid");
-        }
-
-        return token.Permissions.Contains(permission);
+        return !token.IsValid(this)
+            ? throw new SecurityException($"The token {token.TokenId} is invalid")
+            : token.Permissions.Contains(permission);
     }
 
     /// <summary>
@@ -533,10 +513,7 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
     /// <exception cref="SecurityException">
     /// One of the permission IDs is not registered or the permission is invalid.
     /// </exception>
-    public IEnumerable<Permission> ResolvePermissions(IEnumerable<string> permissionIds)
-    {
-        return permissionIds.Select(ResolvePermission).ToArray();
-    }
+    public IEnumerable<Permission> ResolvePermissions(IEnumerable<string> permissionIds) => permissionIds.Select(ResolvePermission).ToArray();
 
     /// <summary>
     /// Resolves the specified permission ID to a registered <see cref="Permission"/>.
@@ -556,20 +533,12 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
 
         Ensure.String.IsNotNullOrEmpty(permissionId, nameof(permissionId));
 
-        var permission = GetSecurityObjects<Permission>()
+        Permission? permission = GetSecurityObjects<Permission>()
             .FirstOrDefault(p => p.PermissionId == permissionId);
 
-        if (permission == null)
-        {
-            throw new SecurityException($"The permission {permissionId} is not registered");
-        }
-
-        if (!permission.IsValid())
-        {
-            throw new SecurityException($"The permission {permission.PermissionId} is invalid");
-        }
-
-        return permission;
+        return permission == null
+            ? throw new SecurityException($"The permission {permissionId} is not registered")
+            : !permission.IsValid() ? throw new SecurityException($"The permission {permission.PermissionId} is invalid") : permission;
     }
 
     /// <summary>
@@ -594,11 +563,11 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
     /// </param>
     protected virtual void Dispose(bool disposing)
     {
-        if (!_disposed)
+        if (!Disposed)
         {
             if (disposing)
             {
-                foreach (var securityObject in _securityObjects.Values)
+                foreach (SecurityObject securityObject in _securityObjects.Values)
                 {
                     securityObject.Dispose();
                 }
@@ -608,7 +577,7 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
 
             _secretKey = null!;
 
-            _disposed = true;
+            Disposed = true;
         }
     }
 

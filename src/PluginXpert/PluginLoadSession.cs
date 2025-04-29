@@ -1,64 +1,58 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Reflection;
 
 using DouglasDwyer.CasCore;
 
 using SAPTeam.PluginXpert.Types;
 
-namespace SAPTeam.PluginXpert
+namespace SAPTeam.PluginXpert;
+
+public class PluginLoadSession
 {
-    public class PluginLoadSession
+    public PluginManager PluginManager { get; }
+
+    public PluginPackage Package { get; }
+
+    public PluginEntry Entry { get; }
+
+    public PluginLoadResult Result { get; set; } = PluginLoadResult.Unknown;
+
+    public Exception? Exception { get; set; }
+
+    public PluginImplementation? Implementation { get; set; }
+
+    public string? AssemblyPath { get; set; }
+
+    public CasAssemblyLoader? Loader { get; set; }
+
+    public Assembly? Assembly { get; set; }
+
+    public Token? Token { get; set; }
+
+    public IPlugin? Instance { get; set; }
+
+    public IGateway? Gateway { get; set; }
+
+    public PluginLoadSession(PluginManager pluginManager,
+                             PluginPackage package,
+                             PluginEntry entry)
     {
-        public PluginManager PluginManager { get; }
+        PluginManager = pluginManager ?? throw new ArgumentNullException(nameof(pluginManager));
+        Package = package ?? throw new ArgumentNullException(nameof(package));
+        Entry = entry ?? throw new ArgumentNullException(nameof(entry));
+    }
 
-        public PluginPackage Package { get; }
-
-        public PluginEntry Entry { get; }
-
-        public PluginLoadResult Result { get; set; } = PluginLoadResult.Unknown;
-
-        public Exception? Exception { get; set; }
-
-        public PluginImplementation? Implementation { get; set; }
-
-        public string? AssemblyPath { get; set; }
-
-        public CasAssemblyLoader? Loader { get; set; }
-
-        public Assembly? Assembly { get; set; }
-
-        public Token? Token { get; set; }
-
-        public IPlugin? Instance { get; set; }
-
-        public IGateway? Gateway { get; set; }
-
-        public PluginLoadSession(PluginManager pluginManager,
-                                 PluginPackage package,
-                                 PluginEntry entry)
+    public bool TryRun(Action action)
+    {
+        try
         {
-            PluginManager = pluginManager ?? throw new ArgumentNullException(nameof(pluginManager));
-            Package = package ?? throw new ArgumentNullException(nameof(package));
-            Entry = entry ?? throw new ArgumentNullException(nameof(entry));
+            action();
+            return true;
         }
-
-        public bool TryRun(Action action)
+        catch (Exception ex)
         {
-            try
-            {
-                action();
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Exception = ex;
-                Result = PluginLoadResult.Error;
-                return false;
-            }
+            Exception = ex;
+            Result = PluginLoadResult.Error;
+            return false;
         }
     }
 }

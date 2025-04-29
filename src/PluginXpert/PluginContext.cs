@@ -1,12 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using DouglasDwyer.CasCore;
-
-using EnsureThat;
+﻿using DouglasDwyer.CasCore;
 
 using SAPTeam.PluginXpert.Types;
 
@@ -14,9 +6,7 @@ namespace SAPTeam.PluginXpert;
 
 public sealed class PluginContext : IDisposable
 {
-    private bool _disposed;
-
-    public bool Disposed => _disposed;
+    public bool Disposed { get; private set; }
 
     public string Id => PluginEntry.Id;
 
@@ -49,7 +39,7 @@ public sealed class PluginContext : IDisposable
 
     public void Dispose()
     {
-        if (!_disposed)
+        if (!Disposed)
         {
             Valid = false;
 
@@ -65,7 +55,7 @@ public sealed class PluginContext : IDisposable
             Loader?.Unload();
             Loader = null;
 
-            _disposed = true;
+            Disposed = true;
         }
     }
 }
