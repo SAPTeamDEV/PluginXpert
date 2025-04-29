@@ -366,6 +366,86 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
     }
 
     /// <summary>
+    /// Requests a permission for the specified token.
+    /// </summary>
+    /// <param name="token">
+    /// The token to request the permission for.
+    /// </param>
+    /// <param name="permissionId">
+    /// The ID of the permission to request.
+    /// </param>
+    /// <returns>
+    /// The new token with the requested permission, <paramref name="token"/> if the permission is already granted or <see langword="null"/> if the permission request was denied.
+    /// </returns>
+    /// <exception cref="SecurityException">
+    /// The token is invalid or the permission is not registered or invalid.
+    /// </exception>
+    public Token? RequestPermission(Token token, string permissionId)
+    {
+        CheckDisposed();
+
+        Ensure.Any.IsNotNull(token, nameof(token));
+        Ensure.String.IsNotNullOrEmpty(permissionId, nameof(permissionId));
+
+        if (!token.IsValid(this))
+        {
+            throw new SecurityException($"The token {token.TokenId} is invalid");
+        }
+
+        var permission = ResolvePermission(permissionId);
+
+        if (token.Permissions.Contains(permission))
+        {
+            return token;
+        }
+
+        if (!permission.RuntimePermission)
+        {
+            throw new SecurityException($"The permission {permission.PermissionId} cannot be requested at runtime");
+        }
+
+        if (!HandlePermissionRequest(token, permission))
+        {
+            return null;
+        }
+
+        var newToken = new Token(token.Domain,
+                                 token.Owner,
+                                 token.Digest,
+                                 token.Permissions.Add(permission));
+
+        if (!token.Revoke())
+        {
+            throw new SecurityException($"The token {token.TokenId} could not be revoked");
+        }
+
+        AddSecurityObject(newToken);
+
+        return newToken;
+    }
+
+    /// <summary>
+    /// Handles the permission request for the specified token and permission.
+    /// </summary>
+    /// <remarks>
+    /// This method can be overridden to implement custom permission request handling logic.
+    /// By default, it always returns <see langword="true"/>, allowing the permission request to proceed.
+    /// </remarks>
+    /// <param name="token">
+    /// The token requesting the permission.
+    /// </param>
+    /// <param name="permission">
+    /// The permission being requested.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> to allow the permission request; <see langword="false"/> to deny it.
+    /// </returns>
+    protected bool HandlePermissionRequest(Token token, Permission permission)
+    {
+        return true;
+    }
+
+    /// <summary>
     /// Registers a new permission in the security context.
     /// </summary>
     /// <param name="permission">
@@ -388,26 +468,6 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
     /// <param name="token">
     /// The token to check.
     /// </param>
-    /// <param name="permission">
-    /// The registered permission to check.
-    /// </param>
-    /// <returns>
-    /// <see langword="true"/> if the token has the specified permission; otherwise, <see langword="false"/>.
-    /// </returns>
-    /// <exception cref="SecurityException">
-    /// The token is invalid or the permission is not registered or invalid.
-    /// </exception>
-    public bool HasPermission(Token token,  Permission permission)
-    {
-        return HasPermission(token, permission.PermissionId);
-    }
-
-    /// <summary>
-    /// Checks if the specified token has the specified permission.
-    /// </summary>
-    /// <param name="token">
-    /// The token to check.
-    /// </param>
     /// <param name="permissionId">
     /// The registered permission ID to check.
     /// </param>
@@ -417,20 +477,45 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
     /// <exception cref="SecurityException">
     /// The token is invalid or the permission is not registered or invalid.
     /// </exception>
-    public virtual bool HasPermission(Token token, string permissionId)
+    public bool HasPermission(Token token, string permissionId)
     {
         CheckDisposed();
 
         Ensure.Any.IsNotNull(token, nameof(token));
         Ensure.String.IsNotNullOrEmpty(permissionId, nameof(permissionId));
 
+        Permission resolvedPermission = ResolvePermission(permissionId);
+        return HasPermission(token, resolvedPermission);
+    }
+
+    /// <summary>
+    /// Checks if the specified token has the specified permission.
+    /// </summary>
+    /// <param name="token">
+    /// The token to check.
+    /// </param>
+    /// <param name="permission">
+    /// The registered permission to check.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> if the token has the specified permission; otherwise, <see langword="false"/>.
+    /// </returns>
+    /// <exception cref="SecurityException">
+    /// The token is invalid or the permission is not registered or invalid.
+    /// </exception>
+    public virtual bool HasPermission(Token token,  Permission permission)
+    {
+        CheckDisposed();
+
+        Ensure.Any.IsNotNull(token, nameof(token));
+        Ensure.Any.IsNotNull(permission, nameof(permission));
+
         if (!token.IsValid(this))
         {
             throw new SecurityException($"The token {token.TokenId} is invalid");
         }
 
-        Permission resolvedPermission = ResolvePermission(permissionId);
-        return token.Permissions.Contains(resolvedPermission);
+        return token.Permissions.Contains(permission);
     }
 
     /// <summary>
