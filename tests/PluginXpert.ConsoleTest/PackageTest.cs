@@ -33,7 +33,7 @@ internal class Program
             Console.WriteLine("Sessions: ");
             foreach (PluginLoadSession session in pm.LoadSessions)
             {
-                Console.WriteLine($"- {session.Entry.Id}: ({session.Result})");
+                Console.WriteLine($"- {session.Metadata.Id}: ({session.Result})");
                 if (session.Exception != null)
                 {
                     Console.WriteLine($"  {session.Exception.GetType().Name}: {session.Exception.Message}");

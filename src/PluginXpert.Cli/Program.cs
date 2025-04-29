@@ -178,7 +178,7 @@ internal class Program
 
     private static void GeneratePluginConfig(string pluginConfigDestinationPath)
     {
-        PluginEntry blankPlugin = new PluginEntry();
+        PluginMetadata blankPlugin = new();
 
         string jsonData = JsonSerializer.Serialize(blankPlugin, new JsonSerializerOptions()
         {
@@ -201,12 +201,11 @@ internal class Program
                 ctx.Status("[yellow]Loading Plugin Config[/]");
 
                 FileStream configFile = File.OpenRead(pluginConfigPath);
-                PluginEntry config = JsonSerializer.Deserialize<PluginEntry>(configFile);
+                PluginMetadata config = JsonSerializer.Deserialize<PluginMetadata>(configFile);
 
                 ctx.Status("[yellow]Validating Plugin[/]");
 
-                if (config == null
-                    || string.IsNullOrEmpty(config.Id)
+                if (string.IsNullOrEmpty(config.Id)
                     || config.Version == null
                     || string.IsNullOrEmpty(config.Interface)
                     || config.InterfaceVersion == null
@@ -217,6 +216,8 @@ internal class Program
                     return;
                 }
 
+                PluginMetadataBuilder configBuilder = PluginMetadataBuilder.Create(config);
+
                 string assemblyPath = Path.Combine(pluginPath, config.Assembly);
                 if (!File.Exists(assemblyPath))
                 {
@@ -224,26 +225,15 @@ internal class Program
                 }
 
                 Assembly assembly = Assembly.LoadFrom(assemblyPath);
-                TargetFrameworkAttribute attribute = assembly.GetCustomAttribute<TargetFrameworkAttribute>();
-                if (attribute != null)
-                {
-                    Version frameworkVer = ParseFrameworkVersion(attribute.FrameworkName);
-                    config.TargetFrameworkVersion = frameworkVer ?? throw new FormatException("Cannot parse the framework string");
-                }
-                else
-                {
-                    Console.WriteLine("Cannot determine plugin's target framework");
-                    return;
-                }
+                configBuilder.DetectTargetFramework(assembly);
 
-                using SHA256 sha256 = SHA256.Create();
-                using FileStream stream = File.OpenRead(assemblyPath);
-                byte[] hash = sha256.ComputeHash(stream);
-                config.BuildRef = string.Concat(hash[^5..].Select(b => b.ToString("x2")));
+                FileStream stream = File.OpenRead(assemblyPath);
+                configBuilder.ComputeBuildTag(stream);
+                stream.Close();
 
                 ctx.Status("[yellow]Adding Plugin[/]");
 
-                string pluginDest = $"{config.Id}-{config.BuildRef}";
+                string pluginDest = $"{config.Id}-{config.BuildTag}";
                 Parallel.ForEach(SafeEnumerateFiles(pluginPath, "*"), file =>
                 {
                     if (file == Package.BundlePath) return;
@@ -251,7 +241,8 @@ internal class Program
                     AnsiConsole.MarkupLine($"[blue]Added:[/] {Path.GetRelativePath(pluginPath, file)}");
                 });
 
-                Package.PackageInfo.Plugins.Add(config);
+                var finalConfig = configBuilder.Build();
+                Package.PackageInfo.Plugins.Add(finalConfig);
 
                 ctx.Status("[yellow]Saving Package[/]");
                 Package.Update();
@@ -519,33 +510,5 @@ internal class Program
                 .PromptStyle("red")
                 .AllowEmpty()
                 .Secret(null));
-    }
-
-    public static Version ParseFrameworkVersion(string frameworkString)
-    {
-        if (string.IsNullOrWhiteSpace(frameworkString))
-            throw new ArgumentException("Input framework string cannot be null or empty.", nameof(frameworkString));
-
-        // Look for "Version=" (case-insensitive) in the string.
-        const string versionKeyword = "Version=";
-        int versionIndex = frameworkString.IndexOf(versionKeyword, StringComparison.OrdinalIgnoreCase);
-        if (versionIndex == -1)
-        {
-            throw new FormatException("The framework string does not contain a version specification.");
-        }
-
-        // Extract the substring starting right after "Version="
-        string versionSubString = frameworkString.Substring(versionIndex + versionKeyword.Length).Trim();
-
-        // If the version starts with a 'v', remove it.
-        if (versionSubString.StartsWith("v", StringComparison.OrdinalIgnoreCase))
-        {
-            versionSubString = versionSubString.Substring(1);
-        }
-
-        // Try to parse the extracted substring into a Version object.
-        return Version.TryParse(versionSubString, out Version parsedVersion)
-            ? parsedVersion
-            : throw new FormatException($"Unable to parse version from '{versionSubString}'.");
     }
 }

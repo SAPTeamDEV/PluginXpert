@@ -56,9 +56,9 @@ public class PluginPackage : Bundle
         }
     }
 
-    public void ExtractPlugin(PluginEntry plugin, string path)
+    public void ExtractPlugin(PluginMetadata plugin, string path)
     {
-        string pluginDirectory = $"{plugin.Id}-{plugin.BuildRef}/";
+        string pluginDirectory = $"{plugin.Id}-{plugin.BuildTag}/";
 
         using (ZipArchive zip = GetZipArchive())
         {

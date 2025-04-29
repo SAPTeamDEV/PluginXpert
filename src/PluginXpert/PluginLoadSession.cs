@@ -12,7 +12,7 @@ public class PluginLoadSession
 
     public PluginPackage Package { get; }
 
-    public PluginEntry Entry { get; }
+    public PluginMetadata Metadata { get; }
 
     public PluginLoadResult Result { get; set; } = PluginLoadResult.Unknown;
 
@@ -34,11 +34,11 @@ public class PluginLoadSession
 
     public PluginLoadSession(PluginManager pluginManager,
                              PluginPackage package,
-                             PluginEntry entry)
+                             PluginMetadata metadata)
     {
         PluginManager = pluginManager ?? throw new ArgumentNullException(nameof(pluginManager));
         Package = package ?? throw new ArgumentNullException(nameof(package));
-        Entry = entry ?? throw new ArgumentNullException(nameof(entry));
+        Metadata = metadata;
     }
 
     public bool TryRun(Action action)

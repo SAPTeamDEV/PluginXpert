@@ -8,13 +8,13 @@ public sealed class PluginContext : IDisposable
 {
     public bool Disposed { get; private set; }
 
-    public string Id => PluginEntry.Id;
+    public string Id => Metadata.Id;
 
-    public Version Version => PluginEntry.Version;
+    public Version Version => Metadata.Version;
 
     public Token Token { get; private set; }
 
-    public PluginEntry PluginEntry { get; private set; }
+    public PluginMetadata Metadata { get; private set; }
 
     public IPlugin? Instance { get; private set; }
 
@@ -29,7 +29,7 @@ public sealed class PluginContext : IDisposable
     public PluginContext(PluginLoadSession session)
     {
         Instance = session.Instance;
-        PluginEntry = session.Entry;
+        Metadata = session.Metadata;
         Token = session.Token!;
         Gateway = session.Gateway;
         Loader = session.Loader;

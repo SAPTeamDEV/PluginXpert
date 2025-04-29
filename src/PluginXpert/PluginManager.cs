@@ -83,9 +83,9 @@ public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, I
 
         if (!package.VerifyPackageInfo()) throw new InvalidDataException($"Invalid package info");
 
-        Dictionary<string, Dictionary<string, PluginEntry>> loadCondidates = [];
+        Dictionary<string, Dictionary<string, PluginMetadata>> loadCondidates = [];
 
-        foreach (PluginEntry ent in package.PackageInfo.Plugins)
+        foreach (PluginMetadata ent in package.PackageInfo.Plugins)
         {
             PluginLoadSession session = new PluginLoadSession(this, package, ent);
             LoadSessions.Add(session);
@@ -111,22 +111,22 @@ public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, I
                 continue;
             }
 
-            if (!loadCondidates.TryGetValue(ent.Id, out Dictionary<string, PluginEntry>? value))
+            if (!loadCondidates.TryGetValue(ent.Id, out Dictionary<string, PluginMetadata>? value))
             {
                 value = [];
                 loadCondidates[ent.Id] = value;
             }
 
-            if (value.ContainsKey(ent.BuildRef))
+            if (value.ContainsKey(ent.BuildTag))
             {
                 throw new InvalidOperationException("Cannot load duplicated plugins");
             }
 
-            value[ent.BuildRef] = ent;
+            value[ent.BuildTag] = ent;
         }
 
-        List<PluginEntry> chosenEntries = [];
-        foreach (Dictionary<string, PluginEntry> plg in loadCondidates.Values)
+        List<PluginMetadata> chosenEntries = [];
+        foreach (Dictionary<string, PluginMetadata> plg in loadCondidates.Values)
         {
             if (plg.Count == 1)
             {
@@ -134,20 +134,20 @@ public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, I
                 continue;
             }
 
-            PluginEntry? chosenEnt = plg.Values
+            PluginMetadata? chosenEnt = plg.Values
                 .Where(v => v.TargetFrameworkVersion <= RuntimeVersion) // Only consider versions lower or equal to the runtime version
                 .OrderByDescending(v => v.TargetFrameworkVersion) // Get the largest version among them
                 .FirstOrDefault();
 
-            if (chosenEnt != null) chosenEntries.Add(chosenEnt);
+            if (chosenEnt.HasValue) chosenEntries.Add(chosenEnt.Value);
         }
 
         if (chosenEntries.Count == 0) throw new ArgumentException("Can't find any suitable plugins in this package");
 
         List<PluginContext> plugins = [];
-        foreach (PluginEntry entry in chosenEntries)
+        foreach (PluginMetadata entry in chosenEntries)
         {
-            PluginLoadSession session = LoadSessions.Where(x => x.Entry == entry).Single();
+            PluginLoadSession session = LoadSessions.Where(x => x.Metadata == entry).Single();
 
             _ = session.TryRun(() =>
             {
@@ -156,7 +156,7 @@ public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, I
 
                 package.ExtractPlugin(entry, tempPath);
 
-                session.AssemblyPath = Path.Combine(tempPath, $"{entry.Id}-{entry.BuildRef}", entry.Assembly);
+                session.AssemblyPath = Path.Combine(tempPath, $"{entry.Id}-{entry.BuildTag}", entry.Assembly);
                 session.Token = SecurityContext.RegisterPlugin(session);
 
                 CasPolicyBuilder policyBuilder = new CasPolicyBuilder();
@@ -176,10 +176,10 @@ public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, I
         return plugins.ToArray();
     }
 
-    public PluginImplementation? ResolveImplementation(PluginEntry pluginEntry)
+    public PluginImplementation? ResolveImplementation(PluginMetadata metadata)
     {
-        return this.Where(x => x.Interface == pluginEntry.Interface)
-                        .Where(x => pluginEntry.InterfaceVersion >= x.MinimumVersion && pluginEntry.InterfaceVersion <= x.Version)
+        return this.Where(x => x.Interface == metadata.Interface)
+                        .Where(x => metadata.InterfaceVersion >= x.MinimumVersion && metadata.InterfaceVersion <= x.Version)
                         .OrderByDescending(x => x.Version)
                         .FirstOrDefault();
     }
@@ -204,7 +204,7 @@ public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, I
             throw new PluginLoadException("No compatible types found in assembly");
         }
 
-        Type? targetType = compatibleTypes.SingleOrDefault(x => x.Name == session.Entry.Class);
+        Type? targetType = compatibleTypes.SingleOrDefault(x => x.Name == session.Metadata.Class);
         if (targetType == null)
         {
             throw new PluginLoadException("Cannot find target type");

@@ -6,21 +6,18 @@ namespace SAPTeam.PluginXpert;
 
 public class CasLoader : CasAssemblyLoader
 {
-    private readonly PluginEntry _pluginEntry;
+    private readonly PluginMetadata _pluginMetadata;
 
-    public CasLoader(PluginEntry entry, CasPolicy policy, bool isCollectible) : base(policy, isCollectible) => _pluginEntry = entry;
+    public CasLoader(PluginMetadata metadata, CasPolicy policy, bool isCollectible) : base(policy, isCollectible) => _pluginMetadata = metadata;
 
     /// <inheritdoc/>
     protected override void InstrumentAssembly(AssemblyDefinition assembly)
     {
-        if (!_pluginEntry.KeepNamespace)
+        foreach (TypeDefinition? type in assembly.MainModule.Types)
         {
-            foreach (TypeDefinition? type in assembly.MainModule.Types)
-            {
-                if (type.Name == "<Module>") continue;
+            if (type.Name == "<Module>") continue;
 
-                type.Namespace = $"{_pluginEntry.Interface}:{_pluginEntry.Id}";
-            }
+            type.Namespace = $"{_pluginMetadata.Interface}:{_pluginMetadata.Id}";
         }
 
         base.InstrumentAssembly(assembly);

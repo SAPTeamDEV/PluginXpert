@@ -308,7 +308,7 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
             .WithDefaultSandbox()
             .Build();
 
-        CasAssemblyLoader loadContext = new CasLoader(session.Entry, policy, isCollectible: true);
+        CasAssemblyLoader loadContext = new CasLoader(session.Metadata, policy, isCollectible: true);
 
         return loadContext;
     }
@@ -334,10 +334,10 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
 
         Ensure.Any.IsNotNull(session, nameof(session));
 
-        IEnumerable<Permission> permissions = ResolvePermissions(session.Entry.Permissions);
+        IEnumerable<Permission> permissions = ResolvePermissions(session.Metadata.Permissions);
 
         Token token = new Token(session.Implementation?.Interface ?? throw new ArgumentException("Invalid session"),
-                                      session.Entry.Id,
+                                      session.Metadata.Id,
                                       ComputePluginDigest(session),
                                       permissions);
 
@@ -349,7 +349,7 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
     private static string ComputePluginDigest(PluginLoadSession session)
     {
         byte[] allBytes = session.Package.Signatures.Entries.Keys.Select(x => session.Package.GetCertificate(x).Thumbprint)
-            .Concat([session.Implementation!.Interface, session.Entry.Id])
+            .Concat([session.Implementation!.Interface, session.Metadata.Id])
             .SelectMany(Encoding.UTF8.GetBytes)
             .ToArray();
 
