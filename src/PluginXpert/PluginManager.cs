@@ -151,7 +151,7 @@ public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, I
 
             _ = session.TryRun(() =>
             {
-                string tempPath = session.Implementation!.TempPath;
+                string tempPath = Path.Combine(session.Implementation!.TempPath, session.Package.PackageInfo.Id);
                 Directory.CreateDirectory(tempPath);
 
                 package.ExtractPlugin(entry, tempPath);
