@@ -303,16 +303,19 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
     /// <param name="session">
     /// The plugin load session with a valid <see cref="PluginLoadSession.Token"/>.
     /// </param>
+    /// <param name="policyBuilder">
+    /// The policy builder to use for creating the assembly loader.
+    /// </param>
     /// <returns>
     /// A highly secure assembly loader for the specified plugin limited to the assembly permissions granted to the token.
     /// </returns>
-    public CasAssemblyLoader CreateAssemblyLoader(PluginLoadSession session)
+    public CasAssemblyLoader CreateAssemblyLoader(PluginLoadSession session, CasPolicyBuilder policyBuilder)
     {
         CheckDisposed();
 
         Ensure.Any.IsNotNull(session, nameof(session));
 
-        var policy = new CasPolicyBuilder()
+        var policy = policyBuilder
             .WithDefaultSandbox()
             .Build();
 

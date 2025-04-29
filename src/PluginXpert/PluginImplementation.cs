@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using DouglasDwyer.CasCore;
+
 using SAPTeam.PluginXpert.Types;
 
 namespace SAPTeam.PluginXpert;
@@ -48,6 +50,11 @@ public abstract class PluginImplementation : IReadOnlyCollection<PluginContext>,
     public virtual IGateway CreateGateway(PluginLoadSession session)
     {
         return new Gateway(session.Token);
+    }
+
+    public virtual void UpdateAssemblySecurityPolicy(PluginLoadSession session, CasPolicyBuilder policy)
+    {
+        policy.Allow(new TypeBinding(typeof(Gateway), Accessibility.Public));
     }
 
     public override string ToString() => $"{Interface}-{Version}";

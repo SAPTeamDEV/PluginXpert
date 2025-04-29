@@ -169,7 +169,11 @@ public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, I
 
                 session.AssemblyPath = Path.Combine(tempPath, $"{entry.Id}-{entry.BuildRef}", entry.Assembly);
                 session.Token = SecurityContext.RegisterPlugin(session);
-                session.Loader = SecurityContext.CreateAssemblyLoader(session);
+
+                var policyBuilder = new CasPolicyBuilder();
+                session.Implementation.UpdateAssemblySecurityPolicy(session, policyBuilder);
+
+                session.Loader = SecurityContext.CreateAssemblyLoader(session, policyBuilder);
                 session.Assembly = session.Loader.LoadFromAssemblyPath(session.AssemblyPath);
 
                 InitializePlugin(session);

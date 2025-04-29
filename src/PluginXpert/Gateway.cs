@@ -22,7 +22,7 @@ public class Gateway : IGateway
     /// <summary>
     /// Gets the token that this gateway is associated with.
     /// </summary>
-    public Token Token { get; private set; }
+    protected Token Token { get; private set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Gateway"/> class.

@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using DouglasDwyer.CasCore;
+
 using SAPTeam.PluginXpert.Types;
 
 namespace SAPTeam.PluginXpert;
@@ -34,5 +36,11 @@ public class NovaPluginImplementation : PluginImplementation
     public override IGateway CreateGateway(PluginLoadSession session)
     {
         return new NovaGateway(session.Token);
+    }
+
+    public override void UpdateAssemblySecurityPolicy(PluginLoadSession session, CasPolicyBuilder policy)
+    {
+        base.UpdateAssemblySecurityPolicy(session, policy);
+        policy.Allow(new TypeBinding(typeof(NovaGateway), Accessibility.Public));
     }
 }
