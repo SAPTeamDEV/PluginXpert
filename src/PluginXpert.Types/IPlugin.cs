@@ -3,20 +3,20 @@
 namespace SAPTeam.PluginXpert.Types
 {
     /// <summary>
-    /// Provides standard interface to implement managed plugins.
+    /// This interface defines the contract for a plugin.
     /// </summary>
     public interface IPlugin : IDisposable
     {
         /// <summary>
-        /// Executed right after loading the plugin.
+        /// This method is called when the plugin is loaded.
         /// </summary>
         /// <param name="gateway">
-        /// The gateway to communicate with host.
+        /// The gateway instance that provides access to the plugin's implementation public API.
         /// </param>
         void OnLoad(IGateway gateway);
 
         /// <summary>
-        /// The executive codes of plugin placed in this method. This method called manually by the host application request.
+        /// This method is called by the plugin host to run the plugin.
         /// </summary>
         void Run();
     }

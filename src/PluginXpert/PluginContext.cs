@@ -65,8 +65,6 @@ public sealed class PluginContext : IDisposable
             Loader?.Unload();
             Loader = null;
 
-            Exception = null;
-
             _disposed = true;
         }
     }
