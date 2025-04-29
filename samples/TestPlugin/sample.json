@@ -2,9 +2,10 @@
   "Id": "sample",
   "Version": "1.0",
   "Name": "Sample",
-  "Description": "A Plugin used to demnostrate the plugin system",
+  "Description": "A Plugin used to demonstrate the plugin system",
   "Interface": "nova",
   "InterfaceVersion": "0.1",
   "Assembly": "TestPlugin.dll",
-  "Class": "Class1"
+  "Class": "Class1",
+  "Permissions": []
 }

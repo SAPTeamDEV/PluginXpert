@@ -178,7 +178,20 @@ internal class Program
 
     private static void GeneratePluginConfig(string pluginConfigDestinationPath)
     {
-        PluginMetadata blankPlugin = new();
+        PluginMetadata blankPlugin = new()
+        {
+            Id = "PluginId",
+            Version = new Version(1, 0, 0),
+            Interface = "PluginInterface",
+            InterfaceVersion = new Version(1, 0, 0),
+            TargetFrameworkVersion = new Version(1, 0, 0),
+            Assembly = "PluginAssembly.dll",
+            Class = "PluginClass",
+            Name = "PluginName",
+            Description = "PluginDescription",
+            Permissions = new List<string>(),
+            BuildTag = "BuildTag",
+        };
 
         string jsonData = JsonSerializer.Serialize(blankPlugin, new JsonSerializerOptions()
         {
@@ -233,7 +246,8 @@ internal class Program
 
                 ctx.Status("[yellow]Adding Plugin[/]");
 
-                string pluginDest = $"{config.Id}-{config.BuildTag}";
+                var finalConfig = configBuilder.Build();
+                string pluginDest = $"{finalConfig.Id}-{finalConfig.BuildTag}";
                 Parallel.ForEach(SafeEnumerateFiles(pluginPath, "*"), file =>
                 {
                     if (file == Package.BundlePath) return;
@@ -241,7 +255,6 @@ internal class Program
                     AnsiConsole.MarkupLine($"[blue]Added:[/] {Path.GetRelativePath(pluginPath, file)}");
                 });
 
-                var finalConfig = configBuilder.Build();
                 Package.PackageInfo.Plugins.Add(finalConfig);
 
                 ctx.Status("[yellow]Saving Package[/]");

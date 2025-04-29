@@ -1,5 +1,6 @@
 ﻿using System.IO.Compression;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 
 using SAPTeam.EasySign;
 
@@ -42,12 +43,30 @@ public class PluginPackage : Bundle
     {
         base.Parse(zip);
 
+        var resolver = new DefaultJsonTypeInfoResolver();
+        resolver.Modifiers.Add(static ti =>
+        {
+            if (ti.Kind == JsonTypeInfoKind.Object && ti.Type == typeof(PluginMetadata))
+            {
+                foreach (var prop in ti.Properties)
+                {
+                    if (prop.Name == nameof(PluginMetadata.BuildTag) || prop.Name == nameof(PluginMetadata.TargetFrameworkVersion))
+                    {
+                        prop.IsRequired = true;
+                    }
+                }
+            }
+        });
+
         PackageInfo = null!;
 
         ZipArchiveEntry? entry;
         if ((entry = zip.GetEntry(PackageInfoFileName)) != null)
         {
-            PackageInfo = JsonSerializer.Deserialize<PackageInfo>(entry.Open(), SerializerOptions)!;
+            PackageInfo = JsonSerializer.Deserialize<PackageInfo>(entry.Open(), new JsonSerializerOptions(SerializerOptions)
+            {
+                TypeInfoResolver = resolver
+            })!;
         }
 
         if (PackageInfo == null)

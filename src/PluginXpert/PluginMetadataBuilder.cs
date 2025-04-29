@@ -284,17 +284,17 @@ public class PluginMetadataBuilder : ICloneable
         if (_class == null) throw new InvalidOperationException("Plugin's entrypoint is required.");
 
         return new PluginMetadata(
-            Id: _id,
-            BuildTag: _buildTag,
-            Version: _version,
-            Name: _name,
-            Description: _description,
-            Interface: _interface,
-            InterfaceVersion: _interfaceVersion,
-            TargetFrameworkVersion: _targetFrameworkVersion,
-            Assembly: _assembly,
-            Class: _class,
-            Permissions: _permissions
+            id: _id,
+            buildTag: _buildTag,
+            version: _version,
+            name: _name,
+            description: _description,
+            interfaceId: _interface,
+            interfaceVersion: _interfaceVersion,
+            targetFrameworkVersion: _targetFrameworkVersion,
+            assembly: _assembly,
+            className: _class,
+            permissions: _permissions
         );
     }
 
