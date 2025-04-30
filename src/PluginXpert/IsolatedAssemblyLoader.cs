@@ -1,0 +1,43 @@
+﻿using DouglasDwyer.CasCore;
+
+using Mono.Cecil;
+
+namespace SAPTeam.PluginXpert;
+
+/// <summary>
+/// Represents a plugin assembly loader that uses the CAS (Code Access Security) policy.
+/// </summary>
+public class IsolatedAssemblyLoader : CasAssemblyLoader
+{
+    private readonly PluginMetadata _pluginMetadata;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="IsolatedAssemblyLoader"/> class.
+    /// </summary>
+    /// <param name="session">
+    /// The plugin load session.
+    /// </param>
+    /// <param name="policy">
+    /// The policy that will apply to any assemblies created with this loader.
+    /// </param>
+    /// <param name="isCollectible">
+    /// Whether this context should be able to unload.
+    /// </param>
+    public IsolatedAssemblyLoader(PluginLoadSession session, CasPolicy policy, bool isCollectible) : base(policy, isCollectible)
+    {
+        _pluginMetadata = session.Metadata;
+    }
+
+    /// <inheritdoc/>
+    protected override void InstrumentAssembly(AssemblyDefinition assembly)
+    {
+        foreach (TypeDefinition? type in assembly.MainModule.Types)
+        {
+            if (type.Name == "<Module>") continue;
+
+            type.Namespace = $"{_pluginMetadata.Interface}:{_pluginMetadata.Id}";
+        }
+
+        base.InstrumentAssembly(assembly);
+    }
+}

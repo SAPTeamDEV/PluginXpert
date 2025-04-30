@@ -8,6 +8,8 @@ namespace SAPTeam.PluginXpert;
 
 public class PluginLoadSession
 {
+    public string SessionId { get; }
+
     public PluginManager PluginManager { get; }
 
     public PluginPackage Package { get; }
@@ -22,7 +24,7 @@ public class PluginLoadSession
 
     public string? AssemblyPath { get; set; }
 
-    public CasAssemblyLoader? Loader { get; set; }
+    public IsolatedAssemblyLoader? Loader { get; set; }
 
     public Assembly? Assembly { get; set; }
 
@@ -32,10 +34,12 @@ public class PluginLoadSession
 
     public IGateway? Gateway { get; set; }
 
-    public PluginLoadSession(PluginManager pluginManager,
+    internal PluginLoadSession(string sessionId,
+                             PluginManager pluginManager,
                              PluginPackage package,
                              PluginMetadata metadata)
     {
+        SessionId = sessionId ?? throw new ArgumentNullException(nameof(sessionId));
         PluginManager = pluginManager ?? throw new ArgumentNullException(nameof(pluginManager));
         Package = package ?? throw new ArgumentNullException(nameof(package));
         Metadata = metadata;

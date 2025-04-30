@@ -31,7 +31,7 @@ internal class Program
 
             Console.WriteLine();
             Console.WriteLine("Sessions: ");
-            foreach (PluginLoadSession session in pm.LoadSessions)
+            foreach (PluginLoadSession session in pm.LoadSessions.Values)
             {
                 Console.WriteLine($"- {session.Metadata.Id}: ({session.Result})");
                 if (session.Exception != null)

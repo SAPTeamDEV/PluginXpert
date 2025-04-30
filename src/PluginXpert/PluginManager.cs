@@ -11,37 +11,62 @@ using SAPTeam.PluginXpert.Types;
 namespace SAPTeam.PluginXpert;
 
 /// <summary>
-/// Represents methods for loading managed plugins.
+/// Represents class for loading and managing plugins.
 /// </summary>
 public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, IDisposable
 {
+    /// <summary>
+    /// Gets the version of the current .NET runtime.
+    /// </summary>
     public static Version? RuntimeVersion { get; } = GetRuntimeVersion();
 
+    private bool _disposed;
     private readonly Type _defaultPluginType = typeof(IPlugin);
-
     private readonly Dictionary<string, PluginImplementation> _implementations = [];
 
-    public bool Disposed { get; private set; }
-
-    public List<PluginLoadSession> LoadSessions { get; } = [];
+    /// <summary>
+    /// Gets a value indicating whether the <see cref="PluginManager"/> has been disposed.
+    /// </summary>
+    public bool Disposed => _disposed;
 
     /// <summary>
-    /// Gets the list of all plugins.
+    /// Gets the list of plugin load sessions.
+    /// </summary>
+    /// <remarks>
+    /// This list primarily serves for debugging purposes.
+    /// It contains all plugin load sessions, including those that failed to load at earlier stages.
+    /// </remarks>
+    public Dictionary<string, PluginLoadSession> LoadSessions { get; } = [];
+
+    /// <summary>
+    /// Gets the list of plugins.
     /// </summary>
     public IEnumerable<PluginContext> Plugins => _implementations.Values.Where(x => !x.Disposed).SelectMany(x => x.Plugins);
 
     /// <summary>
-    /// Gets a list of all properly loaded plugins.
+    /// Gets the list of valid plugins.
     /// </summary>
     public IEnumerable<PluginContext> ValidPlugins => Plugins.Where(x => !x.Disposed && x.Valid);
 
     /// <summary>
-    /// Gets the security context associated with this instance.
+    /// Gets the security context used by the <see cref="PluginManager"/> to load plugins.
     /// </summary>
     public SecurityContext SecurityContext { get; }
 
+    /// <summary>
+    /// Gets the number of registered plugin implementations.
+    /// </summary>
     public int Count => _implementations.Count;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PluginManager"/> class.
+    /// </summary>
+    /// <param name="securityContext">
+    /// The security context used to load plugins.
+    /// </param>
+    /// <exception cref="ApplicationException">
+    /// Thrown when the runtime version cannot be determined.
+    /// </exception>
     public PluginManager(SecurityContext? securityContext = null)
     {
         if (RuntimeVersion == null)
@@ -52,23 +77,47 @@ public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, I
         SecurityContext = securityContext ?? new();
     }
 
-    public void Add(PluginImplementation impl)
+    /// <summary>
+    /// Registers a plugin implementation with the <see cref="PluginManager"/>.
+    /// </summary>
+    /// <param name="implementation">
+    /// The plugin implementation to register.
+    /// </param>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the plugin implementation is already registered.
+    /// </exception>
+    public void Add(PluginImplementation implementation)
     {
-        Ensure.Any.IsNotNull(impl);
+        Ensure.Any.IsNotNull(implementation);
 
-        string implId = impl.ToString();
+        string implId = implementation.ToString();
 
         if (_implementations.ContainsKey(implId))
         {
             throw new InvalidOperationException($"Plugin implementation {implId} already registered");
         }
 
-        impl.Initialize(SecurityContext);
+        implementation.Initialize(SecurityContext);
 
-        _implementations[implId] = impl;
+        _implementations[implId] = implementation;
     }
 
-    public PluginContext[] LoadPlugins(PluginPackage package)
+    /// <summary>
+    /// Loads plugins from the specified package.
+    /// </summary>
+    /// <param name="package">
+    /// The plugin package to load plugins from.
+    /// </param>
+    /// <returns>
+    /// An enumerable collection of <see cref="PluginContext"/> instances representing the loaded plugins.
+    /// </returns>
+    /// <exception cref="ApplicationException">
+    /// Thrown when no plugin implementations are registered.
+    /// </exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when the package is invalid.
+    /// </exception>
+    public IEnumerable<PluginContext> LoadPlugins(PluginPackage package)
     {
         Ensure.Any.IsNotNull(package);
 
@@ -77,37 +126,16 @@ public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, I
             throw new ApplicationException("No plugin implementations registered");
         }
 
-        if (!package.Loaded) throw new ArgumentException("Package is not loaded");
-
-        if (!package.ReadOnly) throw new ArgumentException("Cannot use a mutable package");
-
-        if (!package.VerifyPackageInfo()) throw new InvalidDataException($"Invalid package info");
+        VerifyPackage(package);
 
         Dictionary<string, Dictionary<string, PluginMetadata>> loadCondidates = [];
 
         foreach (PluginMetadata ent in package.PackageInfo.Plugins)
         {
-            PluginLoadSession session = new PluginLoadSession(this, package, ent);
-            LoadSessions.Add(session);
-
-            PluginImplementation? impl;
-            if ((impl = ResolveImplementation(ent)) == null)
+            PluginLoadSession session = CreateSession(package, ent);
+            
+            if (!VerifyPlugin(session))
             {
-                session.Result = PluginLoadResult.NotSupportedImplementation;
-                continue;
-            }
-
-            session.Implementation = impl;
-
-            if (session.Implementation.Where(x => x.Id == ent.Id).Any())
-            {
-                session.Result = PluginLoadResult.AlreadyLoaded;
-                continue;
-            }
-
-            if (ent.TargetFrameworkVersion > RuntimeVersion)
-            {
-                session.Result = PluginLoadResult.NotSupportedRuntime;
                 continue;
             }
 
@@ -119,35 +147,21 @@ public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, I
 
             if (value.ContainsKey(ent.BuildTag))
             {
-                throw new InvalidOperationException("Cannot load duplicated plugins");
+                session.Result = PluginLoadResult.AlreadyLoaded;
+                continue;
             }
 
             value[ent.BuildTag] = ent;
         }
 
-        List<PluginMetadata> chosenEntries = [];
-        foreach (Dictionary<string, PluginMetadata> plg in loadCondidates.Values)
-        {
-            if (plg.Count == 1)
-            {
-                chosenEntries.Add(plg.First().Value);
-                continue;
-            }
-
-            PluginMetadata? chosenEnt = plg.Values
-                .Where(v => v.TargetFrameworkVersion <= RuntimeVersion) // Only consider versions lower or equal to the runtime version
-                .OrderByDescending(v => v.TargetFrameworkVersion) // Get the largest version among them
-                .FirstOrDefault();
-
-            if (chosenEnt.HasValue) chosenEntries.Add(chosenEnt.Value);
-        }
+        List<PluginMetadata> chosenEntries = PickPlugins(loadCondidates);
 
         if (chosenEntries.Count == 0) throw new ArgumentException("Can't find any suitable plugins in this package");
 
         List<PluginContext> plugins = [];
         foreach (PluginMetadata entry in chosenEntries)
         {
-            PluginLoadSession session = LoadSessions.Where(x => x.Metadata == entry).Single();
+            PluginLoadSession session = LoadSessions.Values.Where(x => x.Metadata == entry).Single();
 
             _ = session.TryRun(() =>
             {
@@ -166,16 +180,147 @@ public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, I
                 session.Assembly = session.Loader.LoadFromAssemblyPath(session.AssemblyPath);
 
                 InitializePlugin(session);
-
-                PluginContext context = new PluginContext(session);
-                session.Implementation.Add(context);
-                plugins.Add(context);
             });
+
+            PluginContext context = new PluginContext(session);
+            session.Implementation!.Add(context);
+
+            plugins.Add(context);
         }
 
-        return plugins.ToArray();
+        return plugins;
     }
 
+    /// <summary>
+    /// Verifies the plugin metadata and checks if the plugin can be loaded.
+    /// </summary>
+    /// <param name="session">
+    /// The plugin load session containing the metadata to verify.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> if the plugin can be loaded; otherwise, <see langword="false"/>.
+    /// </returns>
+    private bool VerifyPlugin(PluginLoadSession session)
+    {
+        PluginImplementation? impl;
+        if ((impl = ResolveImplementation(session.Metadata)) == null)
+        {
+            session.Result = PluginLoadResult.NotSupportedImplementation;
+            return false;
+        }
+
+        session.Implementation = impl;
+
+        if (session.Implementation.Where(x => x.Id == session.Metadata.Id).Any())
+        {
+            session.Result = PluginLoadResult.AlreadyLoaded;
+            return false;
+        }
+
+        if (session.Metadata.TargetFrameworkVersion > RuntimeVersion)
+        {
+            session.Result = PluginLoadResult.NotSupportedRuntime;
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Verifies the plugin package.
+    /// </summary>
+    /// <param name="package">
+    /// The plugin package to verify.
+    /// </param>
+    /// <exception cref="ArgumentException">
+    /// Thrown when the package is not loaded, mutable, or has invalid package info.
+    /// </exception>
+    private static void VerifyPackage(PluginPackage package)
+    {
+        if (!package.Loaded)
+        {
+            throw new ArgumentException("Package is not loaded");
+        }
+
+        if (!package.ReadOnly)
+        {
+            throw new ArgumentException("Cannot use a mutable package");
+        }
+
+        if (!package.VerifyPackageInfo())
+        {
+            throw new ArgumentException($"Invalid package info");
+        }
+    }
+
+    /// <summary>
+    /// Creates a new plugin load session for the specified plugin metadata.
+    /// </summary>
+    /// <param name="package">
+    /// The plugin package containing the metadata.
+    /// </param>
+    /// <param name="metadata">
+    /// The plugin metadata to create a session for.
+    /// </param>
+    /// <returns></returns>
+    private PluginLoadSession CreateSession(PluginPackage package,
+                                            PluginMetadata metadata)
+    {
+        var buffer = new byte[5];
+        string sessionId;
+
+        do
+        {
+            Random.Shared.NextBytes(buffer);
+            sessionId = BitConverter.ToString(buffer).Replace("-", string.Empty).ToLowerInvariant();
+        } while (LoadSessions.ContainsKey(sessionId));
+
+        var session = new PluginLoadSession(sessionId, this, package, metadata);
+        LoadSessions.Add(sessionId, session);
+
+        return session;
+    }
+
+    /// <summary>
+    /// Picks the best plugins from the load candidates.
+    /// </summary>
+    /// <param name="loadCondidates">
+    /// The dictionary of load candidates, where the key is the plugin ID and the value is a dictionary of plugin metadata.
+    /// </param>
+    /// <returns>
+    /// A list of chosen plugin metadata.
+    /// </returns>
+    private static List<PluginMetadata> PickPlugins(Dictionary<string, Dictionary<string, PluginMetadata>> loadCondidates)
+    {
+        List<PluginMetadata> chosenEntries = [];
+        foreach (Dictionary<string, PluginMetadata> plg in loadCondidates.Values)
+        {
+            if (plg.Count == 1)
+            {
+                chosenEntries.Add(plg.First().Value);
+                continue;
+            }
+
+            PluginMetadata? chosenEnt = plg.Values
+                .Where(v => v.TargetFrameworkVersion <= RuntimeVersion) // Only consider versions lower or equal to the runtime version
+                .OrderByDescending(v => v.TargetFrameworkVersion) // Get the largest version among them
+                .FirstOrDefault();
+
+            if (chosenEnt.HasValue) chosenEntries.Add(chosenEnt.Value);
+        }
+
+        return chosenEntries;
+    }
+
+    /// <summary>
+    /// Resolves the plugin implementation for the specified metadata.
+    /// </summary>
+    /// <param name="metadata">
+    /// The plugin metadata to resolve the implementation for.
+    /// </param>
+    /// <returns>
+    /// The resolved plugin implementation, or <see langword="null"/> if no suitable implementation is found.
+    /// </returns>
     public PluginImplementation? ResolveImplementation(PluginMetadata metadata)
     {
         return this.Where(x => x.Interface == metadata.Interface)
@@ -184,6 +329,18 @@ public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, I
                         .FirstOrDefault();
     }
 
+    /// <summary>
+    /// Initializes the plugin by loading its assembly and creating an instance of the plugin type.
+    /// </summary>
+    /// <param name="session">
+    /// The plugin load session containing the assembly and metadata.
+    /// </param>
+    /// <exception cref="ArgumentException">
+    /// Thrown when the session is invalid or the assembly is not found.
+    /// </exception>
+    /// <exception cref="PluginLoadException">
+    /// Thrown when the plugin cannot be created.
+    /// </exception>
     private void InitializePlugin(PluginLoadSession session)
     {
         if (session.Implementation == null)
@@ -229,6 +386,12 @@ public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, I
         session.Result = PluginLoadResult.Success;
     }
 
+    /// <summary>
+    /// Gets the version of the current .NET runtime.
+    /// </summary>
+    /// <returns>
+    /// The version of the current .NET runtime, or <see langword="null"/> if it cannot be determined.
+    /// </returns>
     private static Version? GetRuntimeVersion()
     {
         string frameworkDescription = RuntimeInformation.FrameworkDescription;
@@ -238,20 +401,22 @@ public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, I
             string[] parts = frameworkDescription.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length > 1)
             {
-                return Version.TryParse(parts[1], out Version version) ? version : null;
+                return Version.TryParse(parts[1], out Version? version) ? version : null;
             }
         }
 
         return null;
     }
 
+    /// <inheritdoc/>
     public IEnumerator<PluginImplementation> GetEnumerator() => _implementations.Values.GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => _implementations.Values.GetEnumerator();
 
+    /// <inheritdoc/>
     public void Dispose()
     {
-        if (!Disposed)
+        if (!_disposed)
         {
             LoadSessions.Clear();
 
@@ -264,7 +429,7 @@ public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, I
 
             SecurityContext.Dispose();
 
-            Disposed = true;
+            _disposed = true;
         }
     }
 }

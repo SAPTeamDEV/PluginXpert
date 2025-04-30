@@ -296,9 +296,9 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
     /// The policy builder to use for creating the assembly loader.
     /// </param>
     /// <returns>
-    /// A highly secure assembly loader for the specified plugin limited to the assembly permissions granted to the token.
+    /// A highly secure assembly loader for the specified plugin, limited to the assembly permissions granted to the token.
     /// </returns>
-    public CasAssemblyLoader CreateAssemblyLoader(PluginLoadSession session, CasPolicyBuilder policyBuilder)
+    public IsolatedAssemblyLoader CreateAssemblyLoader(PluginLoadSession session, CasPolicyBuilder policyBuilder)
     {
         CheckDisposed();
 
@@ -308,7 +308,7 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
             .WithDefaultSandbox()
             .Build();
 
-        CasAssemblyLoader loadContext = new CasLoader(session.Metadata, policy, isCollectible: true);
+        var loadContext = new IsolatedAssemblyLoader(session, policy, isCollectible: true);
 
         return loadContext;
     }
