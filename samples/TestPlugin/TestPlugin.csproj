@@ -20,6 +20,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Pastel" Version="6.0.1" />
+    <PackageReference Include="SAPTeam.CommonTK" Version="4.1.3" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\PluginXpert.Types\PluginXpert.Types.csproj">
       <Private>false</Private>
       <ExcludeAssets>runtime</ExcludeAssets>

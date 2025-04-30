@@ -1,4 +1,6 @@
-﻿using SAPTeam.PluginXpert.Types;
+﻿using Pastel;
+
+using SAPTeam.PluginXpert.Types;
 
 namespace TestPlugin;
 
@@ -37,6 +39,9 @@ public class Class1 : INovaPlugin
         {
             Console.WriteLine($" - {permission}");
         }
+
+        Console.WriteLine("Test Pastel");
+        Console.WriteLine("Red".Pastel(ConsoleColor.Red));
 
         throw new ApplicationException("Test exception");
     }
