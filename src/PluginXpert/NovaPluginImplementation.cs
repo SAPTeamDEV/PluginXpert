@@ -9,6 +9,13 @@ namespace SAPTeam.PluginXpert;
 /// </summary>
 public class NovaPluginImplementation : PluginImplementation
 {
+    readonly Permission _appdomainPermission = new(scope: "assembly",
+                                                   name: "appdomain",
+                                                   friendlyName: "App Domain Access",
+                                                   description: null,
+                                                   sensitivity: PermissionSensitivity.Medium,
+                                                   runtimePermission: false);
+
     /// <inheritdoc/>
     public override string Name => "nova";
 
@@ -29,7 +36,7 @@ public class NovaPluginImplementation : PluginImplementation
     /// <inheritdoc/>
     protected internal override void RegisterPermissions(SecurityContext securityContext)
     {
-
+        securityContext.RegisterPermission(_appdomainPermission);
     }
 
     /// <inheritdoc/>
@@ -43,5 +50,13 @@ public class NovaPluginImplementation : PluginImplementation
     {
         base.UpdateAssemblySecurityPolicy(session, policy);
         policy.Allow(new TypeBinding(typeof(NovaGateway), Accessibility.Public));
+
+        if (session.Token!.IsValid())
+        {
+            if (session.Token.Permissions.Contains(_appdomainPermission))
+            {
+                policy.Allow(new TypeBinding(typeof(AppDomain), Accessibility.Public));
+            }
+        }
     }
 }

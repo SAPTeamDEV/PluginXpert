@@ -1,4 +1,6 @@
-﻿using Pastel;
+﻿using Newtonsoft.Json;
+
+using Pastel;
 
 using SAPTeam.PluginXpert.Types;
 
@@ -40,8 +42,12 @@ public class Class1 : INovaPlugin
             Console.WriteLine($" - {permission}");
         }
 
-        Console.WriteLine("Test Pastel");
-        Console.WriteLine("Red".Pastel(ConsoleColor.Red));
+        // Pastel has P/Invoke dependencies, so it will be blocked by the assembly loader.
+        //Console.WriteLine("Test Pastel");
+        //Console.WriteLine("Red".Pastel(ConsoleColor.Red));
+
+        Console.WriteLine("Test CommonTK");
+        Console.WriteLine(SAPTeam.CommonTK.Context.ApplicationDirectory);
 
         throw new ApplicationException("Test exception");
     }

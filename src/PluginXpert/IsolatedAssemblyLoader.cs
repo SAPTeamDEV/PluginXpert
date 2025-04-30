@@ -1,4 +1,7 @@
-﻿using DouglasDwyer.CasCore;
+﻿using System.Reflection;
+using System.Runtime.Loader;
+
+using DouglasDwyer.CasCore;
 
 using Mono.Cecil;
 
@@ -10,6 +13,9 @@ namespace SAPTeam.PluginXpert;
 public class IsolatedAssemblyLoader : CasAssemblyLoader
 {
     private readonly PluginMetadata _pluginMetadata;
+    private readonly AssemblyDependencyResolver _assemblyDependencyResolver;
+
+    private bool _entryPointProcessed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="IsolatedAssemblyLoader"/> class.
@@ -26,16 +32,41 @@ public class IsolatedAssemblyLoader : CasAssemblyLoader
     public IsolatedAssemblyLoader(PluginLoadSession session, CasPolicy policy, bool isCollectible) : base(policy, isCollectible)
     {
         _pluginMetadata = session.Metadata;
+
+        _assemblyDependencyResolver = new AssemblyDependencyResolver(session.AssemblyPath!);
+    }
+
+    /// <inheritdoc/>
+    protected override Assembly? Load(AssemblyName assemblyName)
+    {
+        Assembly? assembly = base.Load(assemblyName);
+
+        if (assembly == null)
+        {
+            string? resolvedPath = _assemblyDependencyResolver.ResolveAssemblyToPath(assemblyName);
+
+            if (resolvedPath != null)
+            {
+                return LoadFromAssemblyPath(resolvedPath);
+            }
+        }
+
+        return null;
     }
 
     /// <inheritdoc/>
     protected override void InstrumentAssembly(AssemblyDefinition assembly)
     {
-        foreach (TypeDefinition? type in assembly.MainModule.Types)
+        if (!_entryPointProcessed)
         {
-            if (type.Name == "<Module>") continue;
+            foreach (TypeDefinition? type in assembly.MainModule.Types)
+            {
+                if (type.Name == "<Module>") continue;
 
-            type.Namespace = $"{_pluginMetadata.Interface}:{_pluginMetadata.Id}";
+                type.Namespace = $"{_pluginMetadata.Interface}:{_pluginMetadata.Id}";
+            }
+
+            _entryPointProcessed = true;
         }
 
         base.InstrumentAssembly(assembly);

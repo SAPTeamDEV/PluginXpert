@@ -7,5 +7,7 @@
   "InterfaceVersion": "0.1",
   "Assembly": "TestPlugin.dll",
   "Class": "Class1",
-  "Permissions": []
+  "Permissions": [
+    "assembly:appdomain"
+  ]
 }
