@@ -97,7 +97,7 @@ public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, I
             throw new InvalidOperationException($"Plugin implementation {implId} already registered");
         }
 
-        implementation.Initialize(SecurityContext);
+        implementation.RegisterPermissions(SecurityContext);
 
         _implementations[implId] = implementation;
     }
@@ -323,7 +323,7 @@ public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, I
     /// </returns>
     public PluginImplementation? ResolveImplementation(PluginMetadata metadata)
     {
-        return this.Where(x => x.Interface == metadata.Interface)
+        return this.Where(x => x.Name == metadata.Interface)
                         .Where(x => metadata.InterfaceVersion >= x.MinimumVersion && metadata.InterfaceVersion <= x.Version)
                         .OrderByDescending(x => x.Version)
                         .FirstOrDefault();

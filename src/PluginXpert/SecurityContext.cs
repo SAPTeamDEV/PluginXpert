@@ -336,7 +336,7 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
 
         IEnumerable<Permission> permissions = ResolvePermissions(session.Metadata.Permissions);
 
-        Token token = new Token(session.Implementation?.Interface ?? throw new ArgumentException("Invalid session"),
+        Token token = new Token(session.Implementation?.Name ?? throw new ArgumentException("Invalid session"),
                                       session.Metadata.Id,
                                       ComputePluginDigest(session),
                                       permissions);
@@ -349,7 +349,7 @@ public class SecurityContext : IEnumerable<SecurityObject>, IDisposable
     private static string ComputePluginDigest(PluginLoadSession session)
     {
         byte[] allBytes = session.Package.Signatures.Entries.Keys.Select(x => session.Package.GetCertificate(x).Thumbprint)
-            .Concat([session.Implementation!.Interface, session.Metadata.Id])
+            .Concat([session.Implementation!.Name, session.Metadata.Id])
             .SelectMany(Encoding.UTF8.GetBytes)
             .ToArray();
 
