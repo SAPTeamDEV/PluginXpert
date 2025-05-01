@@ -26,6 +26,11 @@ public enum PluginLoadResult
     NotSupportedRuntime,
 
     /// <summary>
+    /// Indicates that the plugin is ignored by the plugin manager.
+    /// </summary>
+    Skipped,
+
+    /// <summary>
     /// Indicates that an error occurred while loading the plugin.
     /// </summary>
     Error,

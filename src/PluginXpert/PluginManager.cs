@@ -128,7 +128,7 @@ public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, I
 
         VerifyPackage(package);
 
-        Dictionary<string, Dictionary<string, PluginMetadata>> loadCondidates = [];
+        Dictionary<string, Dictionary<string, PluginLoadSession>> loadCondidates = [];
 
         foreach (PluginMetadata ent in package.PackageInfo.Plugins)
         {
@@ -139,7 +139,7 @@ public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, I
                 continue;
             }
 
-            if (!loadCondidates.TryGetValue(ent.Id, out Dictionary<string, PluginMetadata>? value))
+            if (!loadCondidates.TryGetValue(ent.Id, out Dictionary<string, PluginLoadSession>? value))
             {
                 value = [];
                 loadCondidates[ent.Id] = value;
@@ -151,26 +151,27 @@ public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, I
                 continue;
             }
 
-            value[ent.BuildTag] = ent;
+            value[ent.BuildTag] = session;
         }
 
-        List<PluginMetadata> chosenEntries = PickPlugins(loadCondidates);
+        var chosenEntries = PickPlugins(loadCondidates);
 
-        if (chosenEntries.Count == 0) throw new ArgumentException("Can't find any suitable plugins in this package");
-
-        List<PluginContext> plugins = [];
-        foreach (PluginMetadata entry in chosenEntries)
+        if (!chosenEntries.Any())
         {
-            PluginLoadSession session = LoadSessions.Values.Where(x => x.Metadata == entry).Single();
+            throw new ArgumentException("Can't find any suitable plugins in this package");
+        }
 
+        List<PluginContext> contexts = new();
+        foreach (PluginLoadSession session in chosenEntries)
+        {
             _ = session.TryRun(() =>
             {
                 string tempPath = Path.Combine(session.Implementation!.TempPath, session.Package.PackageInfo.Id);
                 Directory.CreateDirectory(tempPath);
 
-                package.ExtractPlugin(entry, tempPath);
+                package.ExtractPlugin(session.Metadata, tempPath);
 
-                session.AssemblyPath = Path.Combine(tempPath, $"{entry.Id}-{entry.BuildTag}", entry.Assembly);
+                session.AssemblyPath = Path.Combine(tempPath, $"{session.Metadata.Id}-{session.Metadata.BuildTag}", session.Metadata.Assembly);
                 session.Token = SecurityContext.RegisterPlugin(session);
 
                 CasPolicyBuilder policyBuilder = new CasPolicyBuilder();
@@ -185,10 +186,10 @@ public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, I
             PluginContext context = new PluginContext(session);
             session.Implementation!.Add(context);
 
-            plugins.Add(context);
+            contexts.Add(context);
         }
 
-        return plugins;
+        return contexts;
     }
 
     /// <summary>
@@ -290,26 +291,31 @@ public sealed class PluginManager : IReadOnlyCollection<PluginImplementation>, I
     /// <returns>
     /// A list of chosen plugin metadata.
     /// </returns>
-    private static List<PluginMetadata> PickPlugins(Dictionary<string, Dictionary<string, PluginMetadata>> loadCondidates)
+    private static IEnumerable<PluginLoadSession> PickPlugins(Dictionary<string, Dictionary<string, PluginLoadSession>> loadCondidates)
     {
-        List<PluginMetadata> chosenEntries = [];
-        foreach (Dictionary<string, PluginMetadata> plg in loadCondidates.Values)
+        foreach (Dictionary<string, PluginLoadSession> plg in loadCondidates.Values)
         {
             if (plg.Count == 1)
             {
-                chosenEntries.Add(plg.First().Value);
+                yield return plg.Values.First();
                 continue;
             }
 
-            PluginMetadata? chosenEnt = plg.Values
-                .Where(v => v.TargetFrameworkVersion <= RuntimeVersion) // Only consider versions lower or equal to the runtime version
-                .OrderByDescending(v => v.TargetFrameworkVersion) // Get the largest version among them
-                .FirstOrDefault();
+            var sorted = plg.Values
+                .Where(v => v.Metadata.TargetFrameworkVersion <= RuntimeVersion) // Only consider versions lower or equal to the runtime version
+                .OrderByDescending(v => v.Metadata.TargetFrameworkVersion); // Get the largest version among them
 
-            if (chosenEnt.HasValue) chosenEntries.Add(chosenEnt.Value);
+            foreach (var entry in sorted.Skip(1))
+            {
+                entry.Result = PluginLoadResult.Skipped;
+            }
+
+            var chosen = sorted.FirstOrDefault();
+            if (chosen != null)
+            {
+                yield return chosen;
+            }
         }
-
-        return chosenEntries;
     }
 
     /// <summary>
