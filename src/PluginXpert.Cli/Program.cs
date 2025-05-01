@@ -1,11 +1,14 @@
 ﻿using System.Collections.Concurrent;
 using System.CommandLine;
 using System.Reflection;
+using System.Runtime.Loader;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
+
+using Microsoft.Extensions.DependencyModel;
 
 using SAPTeam.PluginXpert;
 
@@ -184,18 +187,17 @@ internal class Program
             Version = new Version(1, 0, 0),
             Interface = "PluginInterface",
             InterfaceVersion = new Version(1, 0, 0),
-            TargetFrameworkVersion = new Version(1, 0, 0),
             Assembly = "PluginAssembly.dll",
             Class = "PluginClass",
             Name = "PluginName",
             Description = "PluginDescription",
             Permissions = new List<string>(),
-            BuildTag = "BuildTag",
         };
 
         string jsonData = JsonSerializer.Serialize(blankPlugin, new JsonSerializerOptions()
         {
             WriteIndented = true,
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
         });
         byte[] buffer = Encoding.UTF8.GetBytes(jsonData);
 
@@ -237,8 +239,28 @@ internal class Program
                     Console.WriteLine("File not found: " + assemblyPath);
                 }
 
+                string depsPath = Path.Combine(pluginPath, Path.GetFileNameWithoutExtension(config.Assembly) + ".deps.json");
+
                 Assembly assembly = Assembly.LoadFrom(assemblyPath);
                 configBuilder.DetectTargetFramework(assembly);
+
+                var deps = new DependencyContextJsonReader().Read(File.OpenRead(depsPath));
+                var resolver = new AssemblyDependencyResolver(assemblyPath);
+
+                if (deps != null)
+                {
+                    foreach (RuntimeLibrary lib in deps.RuntimeLibraries)
+                    {
+                        var asmName = new AssemblyName($"{lib.Name}, Version={lib.Version}, Culture=neutral, PublicKeyToken=null");
+
+                        Console.WriteLine($"Library: {lib.Name}");
+                        Console.WriteLine($"Version: {lib.Version}");
+                        Console.WriteLine($"Type: {lib.Type}");
+                        Console.WriteLine($"Hash: {lib.Hash}");
+                        Console.WriteLine($"Path: {resolver.ResolveAssemblyToPath(asmName)}");
+                        Console.WriteLine();
+                    }
+                }
 
                 FileStream stream = File.OpenRead(assemblyPath);
                 configBuilder.ComputeBuildTag(stream);
